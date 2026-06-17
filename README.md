@@ -18,7 +18,8 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
 - **Podzadania / checklisty** w zadaniu z paskiem postępu i licznikiem `done/total` widocznym także na kafelku.
 - **Komentarze** do zadań.
 - **Audit log** — każda zmiana (utworzenie, edycja, zmiana statusu, delete/restore, trwałe usunięcie, komentarz, import) jest rejestrowana.
-- **Filtrowanie na żywo** po tekście, statusie, priorytecie i widoczności usuniętych + **paginacja** („Pokaż więcej”).
+- **Filtrowanie na żywo** po tekście, statusie, priorytecie, widoczności usuniętych oraz **„Tylko moje”** (zadania przypisane do zalogowanego użytkownika) + **paginacja** („Pokaż więcej”).
+- **Sortowanie listy** wg priorytetu, terminu, ostatniej zmiany lub tytułu (nie narusza ręcznej kolejności na tablicy Kanban).
 - **Eksport / import danych** do pliku JSON (kopia zapasowa stanu).
 - **Trwałość danych** — zadania, komentarze, audit log, motyw, widok i sesja zapisywane w `localStorage`.
 - **Skróty klawiszowe**: `1` / `2` / `3` przełączają widoki, `/` ustawia fokus w wyszukiwarce.
@@ -61,6 +62,7 @@ src/
     format.ts             # formatowanie dat, isOverdue, makeId
     labels.ts             # polskie etykiety akcji i ról
     storage.ts            # bezpieczny wrapper na localStorage
+    sort.ts               # sortowanie listy zadań
     exportImport.ts       # budowanie/parsowanie/pobieranie JSON
   hooks/
     useJiraStore.ts       # reducer zadań/komentarzy/audit + persystencja

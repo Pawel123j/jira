@@ -6,7 +6,7 @@ import { ToastStack } from "./components/ui/Toast";
 import { Dashboard } from "./components/views/Dashboard";
 import { KanbanBoard } from "./components/views/KanbanBoard";
 import { ListView } from "./components/views/ListView";
-import { defaultFilters, demoCredentials } from "./data/seed";
+import { currentUser, defaultFilters, demoCredentials } from "./data/seed";
 import { useJiraStore } from "./hooks/useJiraStore";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useTheme } from "./hooks/useTheme";
@@ -41,6 +41,9 @@ export default function App() {
     const query = filters.search.trim().toLowerCase();
     return store.tasks.filter((task) => {
       if (!filters.showDeleted && task.deleted) return false;
+      if (filters.onlyMine && !task.assignees.includes(currentUser.name)) {
+        return false;
+      }
       if (filters.status !== "ALL" && task.status !== filters.status) return false;
       if (filters.priority !== "ALL" && task.priority !== filters.priority) {
         return false;

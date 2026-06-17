@@ -130,6 +130,7 @@ export const defaultFilters: FiltersState = {
   status: "ALL",
   priority: "ALL",
   showDeleted: true,
+  onlyMine: false,
 };
 
 export const emptyTaskForm: TaskFormState = {

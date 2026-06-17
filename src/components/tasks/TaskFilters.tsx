@@ -70,15 +70,26 @@ export function TaskFilters({
         </select>
       </div>
 
-      <label className={`flex cursor-pointer items-center gap-3 ${inputClasses}`}>
-        <input
-          type="checkbox"
-          checked={filters.showDeleted}
-          onChange={(e) => onChange({ showDeleted: e.target.checked })}
-          className="h-4 w-4 accent-violet-600"
-        />
-        <span>Pokaż też soft deleted</span>
-      </label>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className={`flex cursor-pointer items-center gap-3 ${inputClasses}`}>
+          <input
+            type="checkbox"
+            checked={filters.showDeleted}
+            onChange={(e) => onChange({ showDeleted: e.target.checked })}
+            className="h-4 w-4 accent-violet-600"
+          />
+          <span>Pokaż soft deleted</span>
+        </label>
+        <label className={`flex cursor-pointer items-center gap-3 ${inputClasses}`}>
+          <input
+            type="checkbox"
+            checked={filters.onlyMine}
+            onChange={(e) => onChange({ onlyMine: e.target.checked })}
+            className="h-4 w-4 accent-violet-600"
+          />
+          <span>Tylko moje</span>
+        </label>
+      </div>
 
       <div className="flex items-center justify-between gap-3 text-sm text-slate-500 dark:text-slate-400">
         <span>

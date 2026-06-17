@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { sortOptions, sortTasks, type SortKey } from "../../lib/sort";
 import type {
   CommentItem,
   FiltersState,
@@ -10,6 +11,7 @@ import { TaskCard } from "../tasks/TaskCard";
 import { TaskDetailsPanel } from "../tasks/TaskDetailsPanel";
 import { TaskFilters } from "../tasks/TaskFilters";
 import { Button } from "../ui/Button";
+import { Field, inputClasses } from "../ui/Field";
 import { EmptyState } from "../ui/EmptyState";
 
 const PAGE_SIZE = 8;
@@ -52,12 +54,14 @@ export function ListView({
   onRemoveSubtask,
 }: ListViewProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [sort, setSort] = useState<SortKey>("manual");
 
   // Reset pagination whenever the filtered result set changes size.
   useEffect(() => setVisibleCount(PAGE_SIZE), [tasks.length]);
 
-  const shownTasks = tasks.slice(0, visibleCount);
-  const remaining = tasks.length - shownTasks.length;
+  const sortedTasks = sortTasks(tasks, sort);
+  const shownTasks = sortedTasks.slice(0, visibleCount);
+  const remaining = sortedTasks.length - shownTasks.length;
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -74,6 +78,23 @@ export function ListView({
             onReset={onResetFilters}
             resultCount={tasks.length}
           />
+        </div>
+
+        <div className="mt-4">
+          <Field label="Sortuj" htmlFor="sort-tasks">
+            <select
+              id="sort-tasks"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className={inputClasses}
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
 
         <div className="mt-5 space-y-3">

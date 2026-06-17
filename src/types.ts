@@ -76,6 +76,7 @@ export interface FiltersState {
   status: TaskStatus | "ALL";
   priority: TaskPriority | "ALL";
   showDeleted: boolean;
+  onlyMine: boolean;
 }
 
 /** Serializable snapshot used by JSON export/import. */
