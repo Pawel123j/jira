@@ -12,6 +12,7 @@ import type {
   AuditItem,
   CommentItem,
   ExportPayload,
+  SubTask,
   Task,
   TaskFormState,
   TaskStatus,
@@ -28,6 +29,7 @@ interface StoreState {
 type Action =
   | { type: "CREATE_TASK"; task: Task; audit: AuditItem }
   | { type: "UPDATE_TASK"; task: Task; audit: AuditItem }
+  | { type: "PATCH_TASK"; task: Task }
   | { type: "DELETE_TASK"; id: string; audit: AuditItem }
   | { type: "MOVE_TASK"; tasks: Task[]; audit: AuditItem | null }
   | { type: "ADD_COMMENT"; taskId: string; comment: CommentItem; audit: AuditItem }
@@ -53,6 +55,13 @@ function reducer(state: StoreState, action: Action): StoreState {
           task.id === action.task.id ? action.task : task,
         ),
         audit: withAudit(state, action.audit),
+      };
+    case "PATCH_TASK":
+      return {
+        ...state,
+        tasks: state.tasks.map((task) =>
+          task.id === action.task.id ? action.task : task,
+        ),
       };
     case "DELETE_TASK": {
       const comments = { ...state.comments };
@@ -83,7 +92,7 @@ function reducer(state: StoreState, action: Action): StoreState {
       };
     case "IMPORT_DATA":
       return {
-        tasks: action.payload.tasks,
+        tasks: normalizeTasks(action.payload.tasks),
         comments: action.payload.comments,
         audit: [action.audit, ...action.payload.audit].slice(
           0,
@@ -105,10 +114,18 @@ function getSeedState(): StoreState {
   };
 }
 
+/** Ensure tasks from older storage/imports have all required fields. */
+function normalizeTasks(tasks: Task[]): Task[] {
+  return tasks.map((task) => ({
+    ...task,
+    subtasks: Array.isArray(task.subtasks) ? task.subtasks : [],
+  }));
+}
+
 function getInitialState(): StoreState {
   const seed = getSeedState();
   return {
-    tasks: loadState("tasks", seed.tasks),
+    tasks: normalizeTasks(loadState("tasks", seed.tasks)),
     comments: loadState("comments", seed.comments),
     audit: loadState("audit", seed.audit),
   };
@@ -146,6 +163,7 @@ export function useJiraStore() {
       due: form.due,
       assignees: form.assignees,
       tags: form.tags,
+      subtasks: [],
       deleted: false,
       createdAt: timestamp,
       updatedAt: timestamp,
@@ -297,6 +315,52 @@ export function useJiraStore() {
     [],
   );
 
+  const patchSubtasks = useCallback(
+    (taskId: string, updater: (subtasks: SubTask[]) => SubTask[]) => {
+      const existing = state.tasks.find((task) => task.id === taskId);
+      if (!existing) return;
+      const updated: Task = {
+        ...existing,
+        subtasks: updater(existing.subtasks),
+        updatedAt: nowIso(),
+      };
+      dispatch({ type: "PATCH_TASK", task: updated });
+    },
+    [state.tasks],
+  );
+
+  const addSubtask = useCallback(
+    (taskId: string, title: string) => {
+      const trimmed = title.trim();
+      if (!trimmed) return;
+      patchSubtasks(taskId, (subtasks) => [
+        ...subtasks,
+        { id: makeId("sub"), title: trimmed, done: false },
+      ]);
+    },
+    [patchSubtasks],
+  );
+
+  const toggleSubtask = useCallback(
+    (taskId: string, subId: string) => {
+      patchSubtasks(taskId, (subtasks) =>
+        subtasks.map((sub) =>
+          sub.id === subId ? { ...sub, done: !sub.done } : sub,
+        ),
+      );
+    },
+    [patchSubtasks],
+  );
+
+  const removeSubtask = useCallback(
+    (taskId: string, subId: string) => {
+      patchSubtasks(taskId, (subtasks) =>
+        subtasks.filter((sub) => sub.id !== subId),
+      );
+    },
+    [patchSubtasks],
+  );
+
   const importData = useCallback((payload: ExportPayload) => {
     dispatch({
       type: "IMPORT_DATA",
@@ -316,6 +380,9 @@ export function useJiraStore() {
       toggleDelete,
       deleteTask,
       addComment,
+      addSubtask,
+      toggleSubtask,
+      removeSubtask,
       importData,
       resetDemo,
     }),
@@ -327,6 +394,9 @@ export function useJiraStore() {
       toggleDelete,
       deleteTask,
       addComment,
+      addSubtask,
+      toggleSubtask,
+      removeSubtask,
       importData,
       resetDemo,
     ],

@@ -82,6 +82,39 @@ describe("useJiraStore", () => {
     expect(result.current.audit[0].action).toBe("TASK_DELETED");
   });
 
+  it("adds, toggles and removes a subtask without flooding the audit log", () => {
+    const { result } = renderHook(() => useJiraStore());
+    const auditBefore = result.current.audit.length;
+
+    act(() => {
+      result.current.addSubtask("1", "Nowy krok");
+    });
+    const created = result.current.tasks
+      .find((t) => t.id === "1")
+      ?.subtasks.find((s) => s.title === "Nowy krok");
+    expect(created).toBeDefined();
+    // Subtask edits should not add audit entries.
+    expect(result.current.audit.length).toBe(auditBefore);
+
+    act(() => {
+      result.current.toggleSubtask("1", created!.id);
+    });
+    expect(
+      result.current.tasks
+        .find((t) => t.id === "1")
+        ?.subtasks.find((s) => s.id === created!.id)?.done,
+    ).toBe(true);
+
+    act(() => {
+      result.current.removeSubtask("1", created!.id);
+    });
+    expect(
+      result.current.tasks
+        .find((t) => t.id === "1")
+        ?.subtasks.some((s) => s.id === created!.id),
+    ).toBe(false);
+  });
+
   it("adds a comment to a task", () => {
     const { result } = renderHook(() => useJiraStore());
     act(() => {
@@ -115,6 +148,7 @@ describe("useJiraStore", () => {
           assignees: [],
           due: "",
           tags: [],
+          subtasks: [],
           deleted: false,
           createdAt: "",
           updatedAt: "",

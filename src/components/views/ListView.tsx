@@ -28,6 +28,9 @@ interface ListViewProps {
   onToggleDelete: (id: string) => void;
   onHardDelete: (id: string) => void;
   onAddComment: (text: string) => boolean;
+  onAddSubtask: (taskId: string, title: string) => void;
+  onToggleSubtask: (taskId: string, subId: string) => void;
+  onRemoveSubtask: (taskId: string, subId: string) => void;
 }
 
 export function ListView({
@@ -44,6 +47,9 @@ export function ListView({
   onToggleDelete,
   onHardDelete,
   onAddComment,
+  onAddSubtask,
+  onToggleSubtask,
+  onRemoveSubtask,
 }: ListViewProps) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
@@ -111,6 +117,9 @@ export function ListView({
           onToggleDelete={onToggleDelete}
           onHardDelete={onHardDelete}
           onAddComment={onAddComment}
+          onAddSubtask={onAddSubtask}
+          onToggleSubtask={onToggleSubtask}
+          onRemoveSubtask={onRemoveSubtask}
         />
       ) : (
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-slate-950/20">

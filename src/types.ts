@@ -12,6 +12,12 @@ export interface TeamMember {
   role: Role;
 }
 
+export interface SubTask {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -21,6 +27,7 @@ export interface Task {
   assignees: string[];
   due: string;
   tags: string[];
+  subtasks: SubTask[];
   deleted: boolean;
   createdAt: string;
   updatedAt: string;

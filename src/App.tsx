@@ -248,6 +248,9 @@ export default function App() {
               onToggleDelete={handleToggleDelete}
               onHardDelete={handleHardDelete}
               onAddComment={handleAddComment}
+              onAddSubtask={store.addSubtask}
+              onToggleSubtask={store.toggleSubtask}
+              onRemoveSubtask={store.removeSubtask}
             />
           )}
 

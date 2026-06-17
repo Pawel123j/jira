@@ -10,6 +10,9 @@ interface TaskCardProps {
 
 export function TaskCard({ task, selected, onSelect }: TaskCardProps) {
   const overdue = isOverdue(task.due, task.status, task.deleted);
+  const subtasksTotal = task.subtasks.length;
+  const subtasksDone = task.subtasks.filter((sub) => sub.done).length;
+  const subtasksComplete = subtasksTotal > 0 && subtasksDone === subtasksTotal;
 
   return (
     <button
@@ -30,6 +33,18 @@ export function TaskCard({ task, selected, onSelect }: TaskCardProps) {
       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
         <StatusBadge status={task.status} />
         <span>{task.assignees.join(", ") || "Brak przypisań"}</span>
+        {subtasksTotal > 0 && (
+          <span
+            title="Podzadania"
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+              subtasksComplete
+                ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            }`}
+          >
+            ☑ {subtasksDone}/{subtasksTotal}
+          </span>
+        )}
       </div>
 
       {task.tags.length > 0 && (

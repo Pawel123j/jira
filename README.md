@@ -15,6 +15,7 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
   - **Dashboard** — statystyki: liczba zadań, ukończone, po terminie, soft deleted, rozkład wg statusu i priorytetu oraz pasek postępu.
 - **Zarządzanie zadaniami**: tworzenie, edycja, soft delete + przywracanie oraz **trwałe usuwanie z modalem potwierdzenia**, priorytety, terminy, przypisani, tagi.
 - **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, licznik zadań po terminie na kolumnie.
+- **Podzadania / checklisty** w zadaniu z paskiem postępu i licznikiem `done/total` widocznym także na kafelku.
 - **Komentarze** do zadań.
 - **Audit log** — każda zmiana (utworzenie, edycja, zmiana statusu, delete/restore, trwałe usunięcie, komentarz, import) jest rejestrowana.
 - **Filtrowanie na żywo** po tekście, statusie, priorytecie i widoczności usuniętych + **paginacja** („Pokaż więcej”).
@@ -71,7 +72,7 @@ src/
     auth/LoginScreen.tsx
     layout/Sidebar.tsx, Topbar.tsx
     tasks/TaskForm.tsx, TaskCard.tsx, TaskFilters.tsx,
-          CreateTaskPanel.tsx, TaskDetailsPanel.tsx, Comments.tsx
+          CreateTaskPanel.tsx, TaskDetailsPanel.tsx, Comments.tsx, Subtasks.tsx
     views/ListView.tsx, KanbanBoard.tsx, Dashboard.tsx
     ui/Button.tsx, Badge.tsx, Chip.tsx, Field.tsx,
        EmptyState.tsx, Toast.tsx, ThemeToggle.tsx, ConfirmDialog.tsx

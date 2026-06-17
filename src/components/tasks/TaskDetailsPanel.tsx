@@ -4,6 +4,7 @@ import type { CommentItem, Task, TaskFormState } from "../../types";
 import { Button } from "../ui/Button";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Comments } from "./Comments";
+import { Subtasks } from "./Subtasks";
 import { TaskForm } from "./TaskForm";
 
 interface TaskDetailsPanelProps {
@@ -14,6 +15,9 @@ interface TaskDetailsPanelProps {
   onToggleDelete: (id: string) => void;
   onHardDelete: (id: string) => void;
   onAddComment: (text: string) => boolean;
+  onAddSubtask: (taskId: string, title: string) => void;
+  onToggleSubtask: (taskId: string, subId: string) => void;
+  onRemoveSubtask: (taskId: string, subId: string) => void;
 }
 
 function formFromTask(task: Task): TaskFormState {
@@ -39,6 +43,9 @@ export function TaskDetailsPanel({
   onToggleDelete,
   onHardDelete,
   onAddComment,
+  onAddSubtask,
+  onToggleSubtask,
+  onRemoveSubtask,
 }: TaskDetailsPanelProps) {
   const [form, setForm] = useState<TaskFormState>(() => formFromTask(task));
   const [showErrors, setShowErrors] = useState(false);
@@ -102,6 +109,15 @@ export function TaskDetailsPanel({
               Usuń trwale
             </Button>
           </div>
+        </div>
+
+        <div className="mt-5">
+          <Subtasks
+            subtasks={task.subtasks}
+            onAdd={(title) => onAddSubtask(task.id, title)}
+            onToggle={(subId) => onToggleSubtask(task.id, subId)}
+            onRemove={(subId) => onRemoveSubtask(task.id, subId)}
+          />
         </div>
 
         <div className="mt-5">
