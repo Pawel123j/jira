@@ -52,6 +52,10 @@ export function KanbanBoard({
         const overdueCount = grouped[status].filter((task) =>
           isOverdue(task.due, task.status, task.deleted),
         ).length;
+        const pointsSum = grouped[status].reduce(
+          (sum, task) => sum + (task.points || 0),
+          0,
+        );
 
         return (
           <div
@@ -79,6 +83,14 @@ export function KanbanBoard({
                 <h3 className="font-bold">{status}</h3>
               </div>
               <div className="flex items-center gap-2">
+                {pointsSum > 0 && (
+                  <span
+                    title="Suma story points"
+                    className="rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-semibold text-violet-600 dark:text-violet-400"
+                  >
+                    Σ {pointsSum}
+                  </span>
+                )}
                 {overdueCount > 0 && (
                   <span
                     title="Zadania po terminie"

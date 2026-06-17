@@ -14,7 +14,7 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
   - **Tablica Kanban** — kolumny `To do / In progress / Done` z **przeciąganiem** (drag & drop) do zmiany statusu.
   - **Dashboard** — statystyki: liczba zadań, ukończone, po terminie, soft deleted, rozkład wg statusu i priorytetu oraz pasek postępu.
 - **Zarządzanie zadaniami**: tworzenie, edycja, soft delete + przywracanie oraz **trwałe usuwanie z modalem potwierdzenia**, priorytety, terminy, przypisani, tagi.
-- **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, licznik zadań po terminie na kolumnie.
+- **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, na nagłówku kolumny licznik zadań, suma story points (`Σ`) i licznik zadań po terminie.
 - **Podzadania / checklisty** w zadaniu z paskiem postępu i licznikiem `done/total` widocznym także na kafelku.
 - **Story points (estymaty)** — pole w formularzu, znacznik na kafelku oraz podsumowanie zrobione/łącznie na dashboardzie.
 - **Komentarze** do zadań.
