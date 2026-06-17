@@ -7,7 +7,9 @@ export const auditActionLabels: Record<AuditAction, string> = {
   TASK_STATUS_CHANGED: "Zmieniono status",
   TASK_SOFT_DELETED: "Soft delete",
   TASK_RESTORED: "Przywrócono task",
+  TASK_DELETED: "Usunięto trwale",
   COMMENT_CREATED: "Dodano komentarz",
+  DATA_IMPORTED: "Zaimportowano dane",
 };
 
 /** Polish labels for roles. */

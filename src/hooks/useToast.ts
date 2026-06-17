@@ -1,34 +1,41 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { makeId } from "../lib/format";
+
+export interface ToastItem {
+  id: string;
+  message: string;
+}
 
 /**
- * Transient status messages. A new message resets the auto-dismiss timer;
- * the toast bar only renders while a message is present.
+ * Stack of transient status messages. Each toast auto-dismisses after
+ * `duration` ms (set 0 to keep it until dismissed manually).
  */
 export function useToast() {
-  const [toast, setToast] = useState("");
-  const timerRef = useRef<number | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const timers = useRef<number[]>([]);
 
-  const clearTimer = () => {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
-  const showToast = useCallback((message: string, duration = 3500) => {
-    setToast(message);
-    clearTimer();
+  const showToast = useCallback((message: string, duration = 3500): string => {
+    const id = makeId("toast");
+    setToasts((prev) => [...prev, { id, message }]);
     if (duration > 0) {
-      timerRef.current = window.setTimeout(() => setToast(""), duration);
+      const timer = window.setTimeout(() => {
+        setToasts((prev) => prev.filter((toast) => toast.id !== id));
+      }, duration);
+      timers.current.push(timer);
     }
+    return id;
   }, []);
 
-  const dismissToast = useCallback(() => {
-    clearTimer();
-    setToast("");
-  }, []);
+  useEffect(
+    () => () => {
+      timers.current.forEach((timer) => window.clearTimeout(timer));
+    },
+    [],
+  );
 
-  useEffect(() => clearTimer, []);
-
-  return { toast, showToast, dismissToast };
+  return { toasts, showToast, dismissToast };
 }

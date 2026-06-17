@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type {
   CommentItem,
   FiltersState,
@@ -8,7 +9,10 @@ import { CreateTaskPanel } from "../tasks/CreateTaskPanel";
 import { TaskCard } from "../tasks/TaskCard";
 import { TaskDetailsPanel } from "../tasks/TaskDetailsPanel";
 import { TaskFilters } from "../tasks/TaskFilters";
+import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
+
+const PAGE_SIZE = 8;
 
 interface ListViewProps {
   filters: FiltersState;
@@ -22,6 +26,7 @@ interface ListViewProps {
   onCreate: (form: TaskFormState) => boolean;
   onSave: (id: string, form: TaskFormState) => boolean;
   onToggleDelete: (id: string) => void;
+  onHardDelete: (id: string) => void;
   onAddComment: (text: string) => boolean;
 }
 
@@ -37,8 +42,17 @@ export function ListView({
   onCreate,
   onSave,
   onToggleDelete,
+  onHardDelete,
   onAddComment,
 }: ListViewProps) {
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Reset pagination whenever the filtered result set changes size.
+  useEffect(() => setVisibleCount(PAGE_SIZE), [tasks.length]);
+
+  const shownTasks = tasks.slice(0, visibleCount);
+  const remaining = tasks.length - shownTasks.length;
+
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-slate-950/20">
@@ -57,8 +71,8 @@ export function ListView({
         </div>
 
         <div className="mt-5 space-y-3">
-          {tasks.length > 0 ? (
-            tasks.map((task) => (
+          {shownTasks.length > 0 ? (
+            shownTasks.map((task) => (
               <TaskCard
                 key={task.id}
                 task={task}
@@ -73,6 +87,16 @@ export function ListView({
               description="Żadne zadanie nie pasuje do filtrów. Zmień kryteria lub wyczyść filtry."
             />
           )}
+
+          {remaining > 0 && (
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+            >
+              Pokaż więcej ({remaining})
+            </Button>
+          )}
         </div>
       </section>
 
@@ -85,6 +109,7 @@ export function ListView({
           comments={comments}
           onSave={onSave}
           onToggleDelete={onToggleDelete}
+          onHardDelete={onHardDelete}
           onAddComment={onAddComment}
         />
       ) : (

@@ -39,7 +39,9 @@ export type AuditAction =
   | "TASK_STATUS_CHANGED"
   | "TASK_SOFT_DELETED"
   | "TASK_RESTORED"
-  | "COMMENT_CREATED";
+  | "TASK_DELETED"
+  | "COMMENT_CREATED"
+  | "DATA_IMPORTED";
 
 export interface AuditItem {
   id: string;
@@ -67,4 +69,13 @@ export interface FiltersState {
   status: TaskStatus | "ALL";
   priority: TaskPriority | "ALL";
   showDeleted: boolean;
+}
+
+/** Serializable snapshot used by JSON export/import. */
+export interface ExportPayload {
+  version: 1;
+  exportedAt: string;
+  tasks: Task[];
+  comments: Record<string, CommentItem[]>;
+  audit: AuditItem[];
 }

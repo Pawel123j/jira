@@ -11,6 +11,7 @@ import type {
   AuditAction,
   AuditItem,
   CommentItem,
+  ExportPayload,
   Task,
   TaskFormState,
   TaskStatus,
@@ -27,7 +28,10 @@ interface StoreState {
 type Action =
   | { type: "CREATE_TASK"; task: Task; audit: AuditItem }
   | { type: "UPDATE_TASK"; task: Task; audit: AuditItem }
+  | { type: "DELETE_TASK"; id: string; audit: AuditItem }
+  | { type: "MOVE_TASK"; tasks: Task[]; audit: AuditItem | null }
   | { type: "ADD_COMMENT"; taskId: string; comment: CommentItem; audit: AuditItem }
+  | { type: "IMPORT_DATA"; payload: ExportPayload; audit: AuditItem }
   | { type: "RESET" };
 
 function withAudit(state: StoreState, entry: AuditItem): AuditItem[] {
@@ -50,6 +54,21 @@ function reducer(state: StoreState, action: Action): StoreState {
         ),
         audit: withAudit(state, action.audit),
       };
+    case "DELETE_TASK": {
+      const comments = { ...state.comments };
+      delete comments[action.id];
+      return {
+        tasks: state.tasks.filter((task) => task.id !== action.id),
+        comments,
+        audit: withAudit(state, action.audit),
+      };
+    }
+    case "MOVE_TASK":
+      return {
+        ...state,
+        tasks: action.tasks,
+        audit: action.audit ? withAudit(state, action.audit) : state.audit,
+      };
     case "ADD_COMMENT":
       return {
         ...state,
@@ -61,6 +80,15 @@ function reducer(state: StoreState, action: Action): StoreState {
           ],
         },
         audit: withAudit(state, action.audit),
+      };
+    case "IMPORT_DATA":
+      return {
+        tasks: action.payload.tasks,
+        comments: action.payload.comments,
+        audit: [action.audit, ...action.payload.audit].slice(
+          0,
+          MAX_AUDIT_ENTRIES,
+        ),
       };
     case "RESET":
       return getSeedState();
@@ -122,31 +150,38 @@ export function useJiraStore() {
       createdAt: timestamp,
       updatedAt: timestamp,
     };
-    dispatch({ type: "CREATE_TASK", task, audit: makeAudit("TASK_CREATED", task.title) });
+    dispatch({
+      type: "CREATE_TASK",
+      task,
+      audit: makeAudit("TASK_CREATED", task.title),
+    });
     return task;
   }, []);
 
-  const updateTask = useCallback((id: string, form: TaskFormState): Task | null => {
-    const existing = state.tasks.find((task) => task.id === id);
-    if (!existing) return null;
-    const updated: Task = {
-      ...existing,
-      title: form.title.trim(),
-      description: form.description.trim() || "Brak opisu",
-      status: form.status,
-      priority: form.priority,
-      due: form.due,
-      assignees: form.assignees,
-      tags: form.tags,
-      updatedAt: nowIso(),
-    };
-    dispatch({
-      type: "UPDATE_TASK",
-      task: updated,
-      audit: makeAudit("TASK_UPDATED", updated.title),
-    });
-    return updated;
-  }, [state.tasks]);
+  const updateTask = useCallback(
+    (id: string, form: TaskFormState): Task | null => {
+      const existing = state.tasks.find((task) => task.id === id);
+      if (!existing) return null;
+      const updated: Task = {
+        ...existing,
+        title: form.title.trim(),
+        description: form.description.trim() || "Brak opisu",
+        status: form.status,
+        priority: form.priority,
+        due: form.due,
+        assignees: form.assignees,
+        tags: form.tags,
+        updatedAt: nowIso(),
+      };
+      dispatch({
+        type: "UPDATE_TASK",
+        task: updated,
+        audit: makeAudit("TASK_UPDATED", updated.title),
+      });
+      return updated;
+    },
+    [state.tasks],
+  );
 
   const changeStatus = useCallback(
     (id: string, status: TaskStatus): Task | null => {
@@ -159,6 +194,47 @@ export function useJiraStore() {
         audit: makeAudit("TASK_STATUS_CHANGED", `${existing.title} → ${status}`),
       });
       return updated;
+    },
+    [state.tasks],
+  );
+
+  /**
+   * Reorder/move a task within or across status columns (Kanban drag & drop).
+   * `beforeId` is the task the dragged card was dropped onto, or null for the
+   * end of the column.
+   */
+  const moveTask = useCallback(
+    (draggedId: string, targetStatus: TaskStatus, beforeId: string | null) => {
+      const dragged = state.tasks.find((task) => task.id === draggedId);
+      if (!dragged) return;
+      if (beforeId === draggedId) return;
+
+      const statusChanged = dragged.status !== targetStatus;
+      const updated: Task = {
+        ...dragged,
+        status: targetStatus,
+        updatedAt: statusChanged ? nowIso() : dragged.updatedAt,
+      };
+
+      const rest = state.tasks.filter((task) => task.id !== draggedId);
+      let insertAt = rest.length;
+      if (beforeId) {
+        const index = rest.findIndex((task) => task.id === beforeId);
+        if (index !== -1) insertAt = index;
+      }
+      const tasks = [
+        ...rest.slice(0, insertAt),
+        updated,
+        ...rest.slice(insertAt),
+      ];
+
+      dispatch({
+        type: "MOVE_TASK",
+        tasks,
+        audit: statusChanged
+          ? makeAudit("TASK_STATUS_CHANGED", `${dragged.title} → ${targetStatus}`)
+          : null,
+      });
     },
     [state.tasks],
   );
@@ -186,6 +262,20 @@ export function useJiraStore() {
     [state.tasks],
   );
 
+  const deleteTask = useCallback(
+    (id: string): boolean => {
+      const existing = state.tasks.find((task) => task.id === id);
+      if (!existing) return false;
+      dispatch({
+        type: "DELETE_TASK",
+        id,
+        audit: makeAudit("TASK_DELETED", existing.title),
+      });
+      return true;
+    },
+    [state.tasks],
+  );
+
   const addComment = useCallback(
     (taskId: string, text: string): CommentItem | null => {
       const trimmed = text.trim();
@@ -207,6 +297,14 @@ export function useJiraStore() {
     [],
   );
 
+  const importData = useCallback((payload: ExportPayload) => {
+    dispatch({
+      type: "IMPORT_DATA",
+      payload,
+      audit: makeAudit("DATA_IMPORTED", `${payload.tasks.length} zadań`),
+    });
+  }, []);
+
   const resetDemo = useCallback(() => dispatch({ type: "RESET" }), []);
 
   const actions = useMemo(
@@ -214,11 +312,24 @@ export function useJiraStore() {
       createTask,
       updateTask,
       changeStatus,
+      moveTask,
       toggleDelete,
+      deleteTask,
       addComment,
+      importData,
       resetDemo,
     }),
-    [createTask, updateTask, changeStatus, toggleDelete, addComment, resetDemo],
+    [
+      createTask,
+      updateTask,
+      changeStatus,
+      moveTask,
+      toggleDelete,
+      deleteTask,
+      addComment,
+      importData,
+      resetDemo,
+    ],
   );
 
   return { ...state, ...actions };

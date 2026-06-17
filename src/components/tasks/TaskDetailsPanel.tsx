@@ -2,6 +2,7 @@ import { useState } from "react";
 import { formatDue, isOverdue } from "../../lib/format";
 import type { CommentItem, Task, TaskFormState } from "../../types";
 import { Button } from "../ui/Button";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { Comments } from "./Comments";
 import { TaskForm } from "./TaskForm";
 
@@ -11,6 +12,7 @@ interface TaskDetailsPanelProps {
   /** Returns true when the task was saved. */
   onSave: (id: string, form: TaskFormState) => boolean;
   onToggleDelete: (id: string) => void;
+  onHardDelete: (id: string) => void;
   onAddComment: (text: string) => boolean;
 }
 
@@ -35,10 +37,12 @@ export function TaskDetailsPanel({
   comments,
   onSave,
   onToggleDelete,
+  onHardDelete,
   onAddComment,
 }: TaskDetailsPanelProps) {
   const [form, setForm] = useState<TaskFormState>(() => formFromTask(task));
   const [showErrors, setShowErrors] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const titleError =
     showErrors && !form.title.trim() ? "Tytuł nie może być pusty." : undefined;
@@ -90,15 +94,32 @@ export function TaskDetailsPanel({
           <Button variant="primary" fullWidth onClick={handleSave}>
             Zapisz task
           </Button>
-          <Button variant="danger" fullWidth onClick={() => onToggleDelete(task.id)}>
-            {task.deleted ? "Przywróć task" : "Soft delete"}
-          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="secondary" onClick={() => onToggleDelete(task.id)}>
+              {task.deleted ? "Przywróć" : "Soft delete"}
+            </Button>
+            <Button variant="danger" onClick={() => setConfirmOpen(true)}>
+              Usuń trwale
+            </Button>
+          </div>
         </div>
 
         <div className="mt-5">
           <Comments comments={comments} onAdd={onAddComment} />
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Usunąć task na stałe?"
+        description={`„${task.title}” oraz jego komentarze zostaną nieodwracalnie usunięte.`}
+        confirmLabel="Usuń trwale"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          onHardDelete(task.id);
+        }}
+      />
     </section>
   );
 }

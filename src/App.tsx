@@ -2,14 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
-import { Toast } from "./components/ui/Toast";
+import { ToastStack } from "./components/ui/Toast";
 import { Dashboard } from "./components/views/Dashboard";
 import { KanbanBoard } from "./components/views/KanbanBoard";
 import { ListView } from "./components/views/ListView";
 import { defaultFilters, demoCredentials } from "./data/seed";
 import { useJiraStore } from "./hooks/useJiraStore";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useTheme } from "./hooks/useTheme";
 import { useToast } from "./hooks/useToast";
+import { buildExport, downloadJson, parseImport } from "./lib/exportImport";
 import { loadState, saveState } from "./lib/storage";
 import type {
   AppView,
@@ -21,7 +23,7 @@ import type {
 
 export default function App() {
   const { theme, isDark, setTheme } = useTheme();
-  const { toast, showToast, dismissToast } = useToast();
+  const { toasts, showToast, dismissToast } = useToast();
   const store = useJiraStore();
 
   const [isAuthenticated, setIsAuthenticated] = useState(() =>
@@ -108,9 +110,48 @@ export default function App() {
     return Boolean(comment);
   };
 
-  const handleChangeStatus = (id: string, status: TaskStatus) => {
-    const updated = store.changeStatus(id, status);
-    if (updated) showToast(`Status: ${updated.title} → ${status}`);
+  const handleHardDelete = (id: string) => {
+    const task = store.tasks.find((item) => item.id === id);
+    if (store.deleteTask(id)) {
+      if (selectedTaskId === id) {
+        const next = store.tasks.find((item) => item.id !== id);
+        setSelectedTaskId(next ? next.id : null);
+      }
+      showToast(`Usunięto trwale: ${task?.title ?? "task"}`);
+    }
+  };
+
+  const handleMoveTask = (
+    draggedId: string,
+    status: TaskStatus,
+    beforeId: string | null,
+  ) => {
+    const task = store.tasks.find((item) => item.id === draggedId);
+    const statusChanged = task && task.status !== status;
+    store.moveTask(draggedId, status, beforeId);
+    if (statusChanged) showToast(`Status: ${task.title} → ${status}`);
+  };
+
+  const handleExport = () => {
+    downloadJson(buildExport(store.tasks, store.comments, store.audit));
+    showToast("Wyeksportowano dane do pliku JSON.");
+  };
+
+  const handleImport = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const payload = parseImport(String(reader.result));
+      if (!payload) {
+        showToast("Nieprawidłowy plik — import przerwany.");
+        return;
+      }
+      store.importData(payload);
+      setSelectedTaskId(payload.tasks[0]?.id ?? null);
+      setFilters(defaultFilters);
+      showToast(`Zaimportowano ${payload.tasks.length} zadań.`);
+    };
+    reader.onerror = () => showToast("Nie udało się odczytać pliku.");
+    reader.readAsText(file);
   };
 
   const handleResetDemo = () => {
@@ -125,13 +166,29 @@ export default function App() {
     setFilters((prev) => ({ ...prev, ...patch }));
   const handleResetFilters = () => setFilters(defaultFilters);
 
+  const shortcuts = useMemo(
+    () => ({
+      "1": () => setView("list"),
+      "2": () => setView("board"),
+      "3": () => setView("dashboard"),
+      "/": () => {
+        setView("list");
+        requestAnimationFrame(() =>
+          document.getElementById("filter-search")?.focus(),
+        );
+      },
+    }),
+    [],
+  );
+  useKeyboardShortcuts(shortcuts, isAuthenticated);
+
   if (!isAuthenticated) {
     return (
       <div
         className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100"
         style={{ backgroundImage: backgroundGradient(isDark) }}
       >
-        <Toast message={toast} onDismiss={dismissToast} />
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
         <LoginScreen theme={theme} onThemeChange={setTheme} onLogin={handleLogin} />
       </div>
     );
@@ -142,7 +199,7 @@ export default function App() {
       className="min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100"
       style={{ backgroundImage: backgroundGradient(isDark) }}
     >
-      <Toast message={toast} onDismiss={dismissToast} />
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
 
       <div className="lg:grid lg:grid-cols-[320px_1fr]">
         {sidebarOpen && (
@@ -164,6 +221,8 @@ export default function App() {
             audit={store.audit}
             onLogout={handleLogout}
             onResetDemo={handleResetDemo}
+            onExport={handleExport}
+            onImport={handleImport}
           />
         </div>
 
@@ -187,6 +246,7 @@ export default function App() {
               onCreate={handleCreate}
               onSave={handleSave}
               onToggleDelete={handleToggleDelete}
+              onHardDelete={handleHardDelete}
               onAddComment={handleAddComment}
             />
           )}
@@ -196,7 +256,7 @@ export default function App() {
               tasks={visibleTasks}
               selectedTaskId={selectedTaskId}
               onSelectTask={handleSelectTask}
-              onChangeStatus={handleChangeStatus}
+              onMoveTask={handleMoveTask}
             />
           )}
 

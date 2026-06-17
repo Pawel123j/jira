@@ -13,12 +13,16 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
   - **Lista** — filtry, lista zadań, formularz tworzenia i panel edycji.
   - **Tablica Kanban** — kolumny `To do / In progress / Done` z **przeciąganiem** (drag & drop) do zmiany statusu.
   - **Dashboard** — statystyki: liczba zadań, ukończone, po terminie, soft deleted, rozkład wg statusu i priorytetu oraz pasek postępu.
-- **Zarządzanie zadaniami**: tworzenie, edycja, soft delete + przywracanie, priorytety, terminy, przypisani, tagi.
+- **Zarządzanie zadaniami**: tworzenie, edycja, soft delete + przywracanie oraz **trwałe usuwanie z modalem potwierdzenia**, priorytety, terminy, przypisani, tagi.
+- **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, licznik zadań po terminie na kolumnie.
 - **Komentarze** do zadań.
-- **Audit log** — każda zmiana (utworzenie, edycja, zmiana statusu, delete/restore, komentarz) jest rejestrowana.
-- **Filtrowanie na żywo** po tekście, statusie, priorytecie i widoczności usuniętych.
-- **Trwałość danych** — zadania, komentarze, audit log, motyw i widok zapisywane w `localStorage`.
+- **Audit log** — każda zmiana (utworzenie, edycja, zmiana statusu, delete/restore, trwałe usunięcie, komentarz, import) jest rejestrowana.
+- **Filtrowanie na żywo** po tekście, statusie, priorytecie i widoczności usuniętych + **paginacja** („Pokaż więcej”).
+- **Eksport / import danych** do pliku JSON (kopia zapasowa stanu).
+- **Trwałość danych** — zadania, komentarze, audit log, motyw, widok i sesja zapisywane w `localStorage`.
+- **Skróty klawiszowe**: `1` / `2` / `3` przełączają widoki, `/` ustawia fokus w wyszukiwarce.
 - **Motyw jasny/ciemny** (Tailwind `dark` mode).
+- **Powiadomienia** jako stos toastów z auto-znikaniem.
 - **Dostępność i UX**: etykiety formularzy, `aria-*`, focus ring, obsługa `prefers-reduced-motion`, responsywny layout (mobilny drawer menu), oznaczenia zadań po terminie.
 
 ## 🚀 Uruchomienie
@@ -28,9 +32,19 @@ npm install      # instalacja zależności
 npm run dev      # serwer deweloperski (http://localhost:5173)
 npm run build    # produkcyjny build do dist/
 npm run preview  # podgląd builda produkcyjnego
-npm run typecheck# sprawdzenie typów (tsc --noEmit)
+npm run typecheck# sprawdzenie typów (tsc -b)
 npm run lint     # ESLint
+npm test         # testy jednostkowe (Vitest)
+npm run test:watch # testy w trybie watch
 ```
+
+## ✅ Testy i CI
+
+- **Vitest + React Testing Library** (środowisko `jsdom`). Testy obejmują
+  helpery (`format`, `exportImport`), store (`useJiraStore`) oraz komponent
+  logowania.
+- **GitHub Actions** (`.github/workflows/ci.yml`) na każdy push i PR uruchamia
+  kolejno: `lint → typecheck → test → build`.
 
 ## 🗂️ Struktura projektu
 
@@ -46,10 +60,13 @@ src/
     format.ts             # formatowanie dat, isOverdue, makeId
     labels.ts             # polskie etykiety akcji i ról
     storage.ts            # bezpieczny wrapper na localStorage
+    exportImport.ts       # budowanie/parsowanie/pobieranie JSON
   hooks/
     useJiraStore.ts       # reducer zadań/komentarzy/audit + persystencja
     useTheme.ts           # motyw + klasa `dark` na <html>
-    useToast.ts           # powiadomienia z auto-dismiss
+    useToast.ts           # stos powiadomień z auto-dismiss
+    useKeyboardShortcuts.ts # globalne skróty klawiszowe
+  test/setup.ts           # konfiguracja Vitest + jest-dom
   components/
     auth/LoginScreen.tsx
     layout/Sidebar.tsx, Topbar.tsx
@@ -57,7 +74,7 @@ src/
           CreateTaskPanel.tsx, TaskDetailsPanel.tsx, Comments.tsx
     views/ListView.tsx, KanbanBoard.tsx, Dashboard.tsx
     ui/Button.tsx, Badge.tsx, Chip.tsx, Field.tsx,
-       EmptyState.tsx, Toast.tsx, ThemeToggle.tsx
+       EmptyState.tsx, Toast.tsx, ThemeToggle.tsx, ConfirmDialog.tsx
 ```
 
 ## 🧱 Architektura

@@ -1,3 +1,4 @@
+import { useRef, type ChangeEvent } from "react";
 import { currentUser, teamMembers } from "../../data/seed";
 import { auditActionLabels, roleLabels } from "../../lib/labels";
 import type { AuditItem, ThemeMode } from "../../types";
@@ -10,6 +11,8 @@ interface SidebarProps {
   audit: AuditItem[];
   onLogout: () => void;
   onResetDemo: () => void;
+  onExport: () => void;
+  onImport: (file: File) => void;
 }
 
 const sectionTitle =
@@ -21,7 +24,17 @@ export function Sidebar({
   audit,
   onLogout,
   onResetDemo,
+  onExport,
+  onImport,
 }: SidebarProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) onImport(file);
+    event.target.value = "";
+  };
+
   return (
     <aside className="flex h-full flex-col gap-6 overflow-y-auto border-slate-200 bg-white/80 p-6 backdrop-blur-xl scrollbar-thin dark:border-slate-800/80 dark:bg-slate-950/70 lg:border-r">
       <div>
@@ -82,6 +95,26 @@ export function Sidebar({
       </div>
 
       <div className="mt-auto space-y-3 pt-2">
+        <div className={sectionTitle}>Dane</div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="secondary" size="sm" onClick={onExport}>
+            Eksport
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Import
+          </Button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={handleFileChange}
+        />
         <Button variant="secondary" fullWidth onClick={onResetDemo}>
           Reset danych demo
         </Button>
