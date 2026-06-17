@@ -2,6 +2,7 @@ import { priorityOptions, statusOptions } from "../../data/seed";
 import { priorityDotClasses, statusAccentClasses } from "../../lib/badges";
 import { isOverdue } from "../../lib/format";
 import { auditActionLabels } from "../../lib/labels";
+import { pointsSummary } from "../../lib/stats";
 import type { AuditItem, Task } from "../../types";
 
 interface DashboardProps {
@@ -96,6 +97,8 @@ export function Dashboard({ tasks, audit }: DashboardProps) {
     dotClass: priorityDotClasses[priority],
   }));
 
+  const points = pointsSummary(tasks);
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -125,6 +128,21 @@ export function Dashboard({ tasks, audit }: DashboardProps) {
           <div
             className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all"
             style={{ width: `${completion}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/40 dark:border-slate-800 dark:bg-slate-900/80 dark:shadow-slate-950/20">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-lg font-bold">Story points</h3>
+          <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+            {points.done}/{points.total} pkt · zostało {points.remaining}
+          </span>
+        </div>
+        <div className="h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-violet-500 to-blue-500 transition-all"
+            style={{ width: `${points.pct}%` }}
           />
         </div>
       </div>

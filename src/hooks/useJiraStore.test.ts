@@ -148,6 +148,7 @@ describe("useJiraStore", () => {
           assignees: [],
           due: "",
           tags: [],
+          points: 0,
           subtasks: [],
           deleted: false,
           createdAt: "",

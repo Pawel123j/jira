@@ -1,4 +1,10 @@
-import { priorityOptions, statusOptions, tagOptions, teamMembers } from "../../data/seed";
+import {
+  pointsOptions,
+  priorityOptions,
+  statusOptions,
+  tagOptions,
+  teamMembers,
+} from "../../data/seed";
 import type { TaskFormState, TaskPriority, TaskStatus } from "../../types";
 import { Chip } from "../ui/Chip";
 import { Field, inputClasses } from "../ui/Field";
@@ -74,15 +80,31 @@ export function TaskForm({ idPrefix, value, onChange, titleError }: TaskFormProp
         </Field>
       </div>
 
-      <Field label="Termin" htmlFor={`${idPrefix}-due`}>
-        <input
-          id={`${idPrefix}-due`}
-          type="datetime-local"
-          value={value.due}
-          onChange={(e) => onChange({ due: e.target.value })}
-          className={inputClasses}
-        />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Termin" htmlFor={`${idPrefix}-due`}>
+          <input
+            id={`${idPrefix}-due`}
+            type="datetime-local"
+            value={value.due}
+            onChange={(e) => onChange({ due: e.target.value })}
+            className={inputClasses}
+          />
+        </Field>
+        <Field label="Story points" htmlFor={`${idPrefix}-points`}>
+          <select
+            id={`${idPrefix}-points`}
+            value={value.points}
+            onChange={(e) => onChange({ points: Number(e.target.value) })}
+            className={inputClasses}
+          >
+            {pointsOptions.map((points) => (
+              <option key={points} value={points}>
+                {points === 0 ? "brak" : points}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
 
       <div>
         <div className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-200">

@@ -27,6 +27,7 @@ export interface Task {
   assignees: string[];
   due: string;
   tags: string[];
+  points: number;
   subtasks: SubTask[];
   deleted: boolean;
   createdAt: string;
@@ -65,6 +66,7 @@ export interface TaskFormState {
   status: TaskStatus;
   priority: TaskPriority;
   due: string;
+  points: number;
   assignees: string[];
   tags: string[];
 }

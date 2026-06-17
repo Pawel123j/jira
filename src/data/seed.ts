@@ -37,6 +37,9 @@ export const priorityOptions: TaskPriority[] = [
   "CRITICAL",
 ];
 
+/** Fibonacci-style story point estimates (0 = brak estymaty). */
+export const pointsOptions = [0, 1, 2, 3, 5, 8, 13];
+
 export const demoCredentials = {
   email: "pawel@demo.local",
   password: "demo1234",
@@ -52,6 +55,7 @@ export const initialTasks: Task[] = [
     assignees: ["Mila Member"],
     due: "2026-03-25T18:00",
     tags: ["feature", "frontend"],
+    points: 5,
     subtasks: [
       { id: "s1", title: "Formularz email + hasło", done: true },
       { id: "s2", title: "Walidacja pól", done: false },
@@ -70,6 +74,7 @@ export const initialTasks: Task[] = [
     assignees: ["Adam Admin", "Mila Member"],
     due: "2026-03-24T15:00",
     tags: ["bug", "urgent", "backend"],
+    points: 8,
     subtasks: [
       { id: "s4", title: "Rejestrowanie create/update/delete", done: true },
       { id: "s5", title: "Rejestrowanie restore i komentarzy", done: false },
@@ -87,6 +92,7 @@ export const initialTasks: Task[] = [
     assignees: ["Victor Viewer"],
     due: "",
     tags: ["cleanup"],
+    points: 2,
     subtasks: [],
     deleted: true,
     createdAt: "2026-03-20T11:10",
@@ -139,6 +145,7 @@ export const emptyTaskForm: TaskFormState = {
   status: "To do",
   priority: "MEDIUM",
   due: "",
+  points: 0,
   assignees: [],
   tags: [],
 };

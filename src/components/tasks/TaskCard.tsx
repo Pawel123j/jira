@@ -33,6 +33,14 @@ export function TaskCard({ task, selected, onSelect }: TaskCardProps) {
       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
         <StatusBadge status={task.status} />
         <span>{task.assignees.join(", ") || "Brak przypisań"}</span>
+        {task.points > 0 && (
+          <span
+            title="Story points"
+            className="inline-flex items-center rounded-full bg-violet-500/15 px-2 py-0.5 text-xs font-bold text-violet-600 dark:text-violet-400"
+          >
+            {task.points} pkt
+          </span>
+        )}
         {subtasksTotal > 0 && (
           <span
             title="Podzadania"

@@ -118,6 +118,7 @@ function getSeedState(): StoreState {
 function normalizeTasks(tasks: Task[]): Task[] {
   return tasks.map((task) => ({
     ...task,
+    points: typeof task.points === "number" ? task.points : 0,
     subtasks: Array.isArray(task.subtasks) ? task.subtasks : [],
   }));
 }
@@ -161,6 +162,7 @@ export function useJiraStore() {
       status: form.status,
       priority: form.priority,
       due: form.due,
+      points: form.points,
       assignees: form.assignees,
       tags: form.tags,
       subtasks: [],
@@ -187,6 +189,7 @@ export function useJiraStore() {
         status: form.status,
         priority: form.priority,
         due: form.due,
+        points: form.points,
         assignees: form.assignees,
         tags: form.tags,
         updatedAt: nowIso(),

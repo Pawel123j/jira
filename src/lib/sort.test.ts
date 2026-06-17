@@ -12,6 +12,7 @@ function task(overrides: Partial<Task>): Task {
     assignees: [],
     due: "",
     tags: [],
+    points: 0,
     subtasks: [],
     deleted: false,
     createdAt: "2026-01-01T00:00",

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
+import { ShortcutsDialog } from "./components/ui/ShortcutsDialog";
 import { ToastStack } from "./components/ui/Toast";
 import { Dashboard } from "./components/views/Dashboard";
 import { KanbanBoard } from "./components/views/KanbanBoard";
@@ -33,6 +34,7 @@ export default function App() {
   const [filters, setFilters] = useState<FiltersState>(defaultFilters);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>("2");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => saveState("auth", isAuthenticated), [isAuthenticated]);
   useEffect(() => saveState("view", view), [view]);
@@ -180,6 +182,7 @@ export default function App() {
           document.getElementById("filter-search")?.focus(),
         );
       },
+      "?": () => setHelpOpen(true),
     }),
     [],
   );
@@ -203,6 +206,7 @@ export default function App() {
       style={{ backgroundImage: backgroundGradient(isDark) }}
     >
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
+      <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
 
       <div className="lg:grid lg:grid-cols-[320px_1fr]">
         {sidebarOpen && (
@@ -234,6 +238,7 @@ export default function App() {
             view={view}
             onViewChange={setView}
             onOpenSidebar={() => setSidebarOpen(true)}
+            onOpenHelp={() => setHelpOpen(true)}
           />
 
           {view === "list" && (

@@ -10,9 +10,15 @@ interface TopbarProps {
   view: AppView;
   onViewChange: (view: AppView) => void;
   onOpenSidebar: () => void;
+  onOpenHelp: () => void;
 }
 
-export function Topbar({ view, onViewChange, onOpenSidebar }: TopbarProps) {
+export function Topbar({
+  view,
+  onViewChange,
+  onOpenSidebar,
+  onOpenHelp,
+}: TopbarProps) {
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
@@ -32,6 +38,7 @@ export function Topbar({ view, onViewChange, onOpenSidebar }: TopbarProps) {
         </div>
       </div>
 
+      <div className="flex items-center gap-2">
       <nav
         aria-label="Widok"
         className="inline-flex w-full gap-1 rounded-2xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900/80 sm:w-auto"
@@ -53,6 +60,16 @@ export function Topbar({ view, onViewChange, onOpenSidebar }: TopbarProps) {
           </button>
         ))}
       </nav>
+        <button
+          type="button"
+          onClick={onOpenHelp}
+          aria-label="Pokaż skróty klawiszowe"
+          title="Skróty klawiszowe (?)"
+          className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-base font-bold text-slate-600 transition hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:bg-slate-800 sm:inline-flex"
+        >
+          ?
+        </button>
+      </div>
     </header>
   );
 }

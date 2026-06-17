@@ -16,13 +16,14 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
 - **Zarządzanie zadaniami**: tworzenie, edycja, soft delete + przywracanie oraz **trwałe usuwanie z modalem potwierdzenia**, priorytety, terminy, przypisani, tagi.
 - **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, licznik zadań po terminie na kolumnie.
 - **Podzadania / checklisty** w zadaniu z paskiem postępu i licznikiem `done/total` widocznym także na kafelku.
+- **Story points (estymaty)** — pole w formularzu, znacznik na kafelku oraz podsumowanie zrobione/łącznie na dashboardzie.
 - **Komentarze** do zadań.
 - **Audit log** — każda zmiana (utworzenie, edycja, zmiana statusu, delete/restore, trwałe usunięcie, komentarz, import) jest rejestrowana.
 - **Filtrowanie na żywo** po tekście, statusie, priorytecie, widoczności usuniętych oraz **„Tylko moje”** (zadania przypisane do zalogowanego użytkownika) + **paginacja** („Pokaż więcej”).
 - **Sortowanie listy** wg priorytetu, terminu, ostatniej zmiany lub tytułu (nie narusza ręcznej kolejności na tablicy Kanban).
 - **Eksport / import danych** do pliku JSON (kopia zapasowa stanu).
 - **Trwałość danych** — zadania, komentarze, audit log, motyw, widok i sesja zapisywane w `localStorage`.
-- **Skróty klawiszowe**: `1` / `2` / `3` przełączają widoki, `/` ustawia fokus w wyszukiwarce.
+- **Skróty klawiszowe**: `1` / `2` / `3` przełączają widoki, `/` ustawia fokus w wyszukiwarce, `?` otwiera okno z pomocą skrótów.
 - **Motyw jasny/ciemny** (Tailwind `dark` mode).
 - **Powiadomienia** jako stos toastów z auto-znikaniem.
 - **Dostępność i UX**: etykiety formularzy, `aria-*`, focus ring, obsługa `prefers-reduced-motion`, responsywny layout (mobilny drawer menu), oznaczenia zadań po terminie.
@@ -63,6 +64,7 @@ src/
     labels.ts             # polskie etykiety akcji i ról
     storage.ts            # bezpieczny wrapper na localStorage
     sort.ts               # sortowanie listy zadań
+    stats.ts              # agregacja story points
     exportImport.ts       # budowanie/parsowanie/pobieranie JSON
   hooks/
     useJiraStore.ts       # reducer zadań/komentarzy/audit + persystencja

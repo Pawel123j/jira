@@ -27,6 +27,7 @@ function formFromTask(task: Task): TaskFormState {
     status: task.status,
     priority: task.priority,
     due: task.due,
+    points: task.points,
     assignees: task.assignees,
     tags: task.tags,
   };
