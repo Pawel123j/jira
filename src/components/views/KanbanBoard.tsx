@@ -56,6 +56,9 @@ export function KanbanBoard({
           (sum, task) => sum + (task.points || 0),
           0,
         );
+        const statusIndex = statusOptions.indexOf(status);
+        const prevStatus = statusOptions[statusIndex - 1];
+        const nextStatus = statusOptions[statusIndex + 1];
 
         return (
           <div
@@ -133,6 +136,38 @@ export function KanbanBoard({
                       selected={selectedTaskId === task.id}
                       onSelect={onSelectTask}
                     />
+                    <div className="mt-1.5 flex justify-end gap-1">
+                      <button
+                        type="button"
+                        disabled={!prevStatus}
+                        onClick={() =>
+                          prevStatus && onMoveTask(task.id, prevStatus, null)
+                        }
+                        aria-label={
+                          prevStatus
+                            ? `Przenieś „${task.title}” do: ${prevStatus}`
+                            : "Brak poprzedniej kolumny"
+                        }
+                        className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                      >
+                        ◀
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!nextStatus}
+                        onClick={() =>
+                          nextStatus && onMoveTask(task.id, nextStatus, null)
+                        }
+                        aria-label={
+                          nextStatus
+                            ? `Przenieś „${task.title}” do: ${nextStatus}`
+                            : "Brak następnej kolumny"
+                        }
+                        className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                      >
+                        ▶
+                      </button>
+                    </div>
                   </div>
                 ))
               ) : (

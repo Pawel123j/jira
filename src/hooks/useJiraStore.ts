@@ -204,21 +204,6 @@ export function useJiraStore() {
     [state.tasks],
   );
 
-  const changeStatus = useCallback(
-    (id: string, status: TaskStatus): Task | null => {
-      const existing = state.tasks.find((task) => task.id === id);
-      if (!existing || existing.status === status) return null;
-      const updated: Task = { ...existing, status, updatedAt: nowIso() };
-      dispatch({
-        type: "UPDATE_TASK",
-        task: updated,
-        audit: makeAudit("TASK_STATUS_CHANGED", `${existing.title} → ${status}`),
-      });
-      return updated;
-    },
-    [state.tasks],
-  );
-
   /**
    * Reorder/move a task within or across status columns (Kanban drag & drop).
    * `beforeId` is the task the dragged card was dropped onto, or null for the
@@ -378,7 +363,6 @@ export function useJiraStore() {
     () => ({
       createTask,
       updateTask,
-      changeStatus,
       moveTask,
       toggleDelete,
       deleteTask,
@@ -392,7 +376,6 @@ export function useJiraStore() {
     [
       createTask,
       updateTask,
-      changeStatus,
       moveTask,
       toggleDelete,
       deleteTask,

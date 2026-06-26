@@ -14,7 +14,7 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
   - **Tablica Kanban** — kolumny `To do / In progress / Done` z **przeciąganiem** (drag & drop) do zmiany statusu.
   - **Dashboard** — statystyki: liczba zadań, ukończone, po terminie, soft deleted, rozkład wg statusu i priorytetu oraz pasek postępu.
 - **Zarządzanie zadaniami**: tworzenie, edycja, soft delete + przywracanie oraz **trwałe usuwanie z modalem potwierdzenia**, priorytety, terminy, przypisani, tagi.
-- **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, na nagłówku kolumny licznik zadań, suma story points (`Σ`) i licznik zadań po terminie.
+- **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, na nagłówku kolumny licznik zadań, suma story points (`Σ`) i licznik zadań po terminie. Karty można też przenosić **przyciskami ◀ ▶** (dostępność z klawiatury, bez drag & drop).
 - **Podzadania / checklisty** w zadaniu z paskiem postępu i licznikiem `done/total` widocznym także na kafelku.
 - **Story points (estymaty)** — pole w formularzu, znacznik na kafelku oraz podsumowanie zrobione/łącznie na dashboardzie.
 - **Komentarze** do zadań.
@@ -44,8 +44,10 @@ npm run test:watch # testy w trybie watch
 ## ✅ Testy i CI
 
 - **Vitest + React Testing Library** (środowisko `jsdom`). Testy obejmują
-  helpery (`format`, `exportImport`), store (`useJiraStore`) oraz komponent
-  logowania.
+  helpery (`format`, `sort`, `stats`, `exportImport`), store (`useJiraStore`)
+  oraz komponenty (logowanie, Kanban, podzadania, filtry) — łącznie 45 testów.
+- **Error boundary** — nieoczekiwane błędy pokazują przyjazny ekran zamiast
+  pustej strony.
 - **GitHub Actions** (`.github/workflows/ci.yml`) na każdy push i PR uruchamia
   kolejno: `lint → typecheck → test → build`.
 

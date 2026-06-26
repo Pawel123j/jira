@@ -33,19 +33,6 @@ describe("useJiraStore", () => {
     expect(result.current.audit[0].action).toBe("TASK_UPDATED");
   });
 
-  it("changes status, ignoring a no-op change", () => {
-    const { result } = renderHook(() => useJiraStore());
-    let changed: unknown;
-    act(() => {
-      changed = result.current.changeStatus("1", "In progress");
-    });
-    expect(changed).not.toBeNull();
-    act(() => {
-      changed = result.current.changeStatus("1", "In progress");
-    });
-    expect(changed).toBeNull();
-  });
-
   it("toggles soft delete and back", () => {
     const { result } = renderHook(() => useJiraStore());
     let nextDeleted: unknown;
