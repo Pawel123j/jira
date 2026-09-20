@@ -25,7 +25,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # jsdom 30 (przez undici) wymaga ^22.22.2 || ^24.15.0 || >=26.
+          # Na Node 20 workery Vitesta wywracały się na
+          # `webidl.util.markAsUncloneable is not a function`, zanim
+          # uruchomił się choć jeden test.
+          node-version: 24
           cache: npm
 
       - run: npm ci

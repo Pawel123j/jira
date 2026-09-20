@@ -3,7 +3,10 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Mini Jira — lekki menedżer zadań (React + TypeScript + Tailwind).",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "description": "Mini Jira \u2014 lekki mened\u017cer zada\u0144 (React + TypeScript + Tailwind).",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
