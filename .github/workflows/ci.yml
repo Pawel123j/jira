@@ -15,7 +15,11 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # jsdom 30 (przez undici) wymaga ^22.22.2 || ^24.15.0 || >=26.
+          # Na Node 20 workery Vitesta wywracały się na
+          # `webidl.util.markAsUncloneable is not a function`, zanim
+          # uruchomił się choć jeden test.
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -26,6 +30,12 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Audyt zależności
+        # Blokujemy na `high`, a nie na `low`: przy niższym progu pierwszy
+        # nowy komunikat o podatności w dowolnej zależności deweloperskiej
+        # zapalałby CI na czerwono na commicie, którego nikt nie dotykał.
+        run: npm audit --audit-level=high
 
       - name: Test
         run: npm test

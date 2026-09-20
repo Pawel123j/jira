@@ -1,0 +1,61 @@
+name: Deploy na GitHub Pages
+
+# Aplikacja jest w całości kliencka (stan w localStorage, brak backendu),
+# więc statyczny hosting wystarcza jej w zupełności.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Jedno wdrożenie naraz; nie przerywamy trwającego, żeby nie zostawić
+# Pages w stanie w połowie zaktualizowanym.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # jsdom 30 (przez undici) wymaga ^22.22.2 || ^24.15.0 || >=26.
+          # Na Node 20 workery Vitesta wywracały się na
+          # `webidl.util.markAsUncloneable is not a function`, zanim
+          # uruchomił się choć jeden test.
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        # Pages serwuje pod /<nazwa-repo>/, stąd base ustawiony zmienną.
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - name: SPA fallback
+        # Pages nie ma przepisywania ścieżek. Kopia index.html jako 404.html
+        # sprawia, że wejście pod dowolny adres pokazuje aplikację zamiast
+        # strony błędu GitHuba.
+        run: cp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
