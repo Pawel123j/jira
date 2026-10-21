@@ -159,3 +159,30 @@ React 18 · TypeScript 5 · Vite 8 · Tailwind CSS 3 · Vitest 5 · ESLint
 ## 📄 Licencja
 
 MIT — patrz [LICENSE](LICENSE).
+
+## Weryfikacja środowiska — 2026-10-17
+
+Sprawdzono lokalne demo: logowanie, utworzenie, wyszukiwanie, edycję, zapis po odświeżeniu i trwałe usunięcie zadania w Chromium. `npm run lint`, `npm run typecheck`, `npm test` (45 testów) i build przechodzą. Test przeglądarkowy jest w `e2e/`, uruchamiany przez `.github/workflows/browser.yml`.
+
+Logowanie oraz role w aplikacji lokalnej nie stanowią zabezpieczenia serwera. Dane pozostają w przeglądarce. Hosting publiczny i współpraca wielu użytkowników nie zostały zweryfikowane. Audyt npm nadal zgłasza zależności narzędziowe Tailwind/ESLint; aktualizacja samego lockfile nie usuwa wszystkich zgłoszeń.
+
+
+### Testy przeglądarkowe
+
+Po zainstalowaniu zależności aplikacji i zbudowaniu frontendu zgodnie z README / workflow `browser.yml` (lub jobem browser w `ci.yml`):
+
+```bash
+python -m venv .venv-e2e
+# Aktywuj ten venv przed dalszymi poleceniami.
+python -m pip install -r e2e/requirements.txt
+python -m playwright install chromium
+python -m pytest -q e2e
+```
+
+Na Linux może być potrzebne `python -m playwright install --with-deps chromium` z uprawnieniami administratora. Alternatywnie `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` wskazuje istniejący Chromium. Testy uruchamiają i zatrzymują własny serwer, używają nowego kontekstu przeglądarki i zapisują logi w ignorowanym `e2e/artifacts/`. Pełny backend musi mieć zainstalowane swoje zależności; `E2E_API_PYTHON` jest opcjonalnym wyborem jego interpretera w AutoDesk/BankGuard. Testy nie uruchamiają wdrożenia.
+
+## Walidacja etapu 2 — 2026-10-18
+
+Bramka `npm run security:check` sprawdza pełny audyt, integralność poprawki parsera `braces` i regresje złośliwych wzorców. Surowy `npm audit` nadal zgłasza tę poprawioną lokalnie zależność; szczegóły i termin 2026-11-18 opisano w [SECURITY_PATCH.md](SECURITY_PATCH.md). `npm ci` stosuje patch automatycznie i przerywa pracę, jeśli nie pasuje.
+
+Poprawiono kontrast ukończonych podzadań. E2E obejmuje CRUD/reload, logowanie klawiaturą oraz axe na ekranie logowania, tablicy i edycji. Lokalnie: 45 testów, lint/typy/build, bramka bezpieczeństwa i 1 E2E PASS. To lokalny menedżer zadań; role demonstracyjne nie tworzą serwerowej granicy uprawnień.

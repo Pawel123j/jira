@@ -35,7 +35,7 @@ jobs:
         # Blokujemy na `high`, a nie na `low`: przy niższym progu pierwszy
         # nowy komunikat o podatności w dowolnej zależności deweloperskiej
         # zapalałby CI na czerwono na commicie, którego nikt nie dotykał.
-        run: npm audit --audit-level=high
+        run: npm run security:check
 
       - name: Test
         run: npm test

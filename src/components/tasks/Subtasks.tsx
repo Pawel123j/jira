@@ -56,7 +56,7 @@ export function Subtasks({ subtasks, onAdd, onToggle, onRemove }: SubtasksProps)
             <span
               className={`flex-1 text-sm ${
                 sub.done
-                  ? "text-slate-400 line-through dark:text-slate-500"
+                  ? "text-slate-600 line-through dark:text-slate-400"
                   : ""
               }`}
             >
