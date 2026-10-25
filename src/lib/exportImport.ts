@@ -4,6 +4,7 @@ import type {
   ExportPayload,
   Task,
 } from "../types";
+import { parseAudit, parseComments, parseTasks } from "./stateValidation";
 
 /** Assemble a serializable snapshot of the current state. */
 export function buildExport(
@@ -35,19 +36,8 @@ export function downloadJson(payload: ExportPayload): void {
   URL.revokeObjectURL(url);
 }
 
-function isTaskLike(value: unknown): value is Task {
-  if (typeof value !== "object" || value === null) return false;
-  const task = value as Record<string, unknown>;
-  return (
-    typeof task.id === "string" &&
-    typeof task.title === "string" &&
-    typeof task.status === "string" &&
-    typeof task.priority === "string"
-  );
-}
-
 /**
- * Parse and minimally validate an imported JSON string.
+ * Parse and validate every field used by the UI before replacing current data.
  * Returns a normalized payload, or null when the file is not recognisable.
  */
 export function parseImport(text: string): ExportPayload | null {
@@ -61,16 +51,10 @@ export function parseImport(text: string): ExportPayload | null {
   if (typeof data !== "object" || data === null) return null;
   const payload = data as Record<string, unknown>;
 
-  if (!Array.isArray(payload.tasks)) return null;
-  if (!payload.tasks.every(isTaskLike)) return null;
-
-  const comments =
-    typeof payload.comments === "object" && payload.comments !== null
-      ? (payload.comments as Record<string, CommentItem[]>)
-      : {};
-  const audit = Array.isArray(payload.audit)
-    ? (payload.audit as AuditItem[])
-    : [];
+  const tasks = parseTasks(payload.tasks);
+  const comments = parseComments(payload.comments === undefined ? {} : payload.comments);
+  const audit = parseAudit(payload.audit === undefined ? [] : payload.audit);
+  if (!tasks || !comments || !audit) return null;
 
   return {
     version: 1,
@@ -78,7 +62,7 @@ export function parseImport(text: string): ExportPayload | null {
       typeof payload.exportedAt === "string"
         ? payload.exportedAt
         : new Date().toISOString(),
-    tasks: payload.tasks as Task[],
+    tasks,
     comments,
     audit,
   };

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   currentUser,
   initialAudit,
@@ -6,7 +6,8 @@ import {
   initialTasks,
 } from "../data/seed";
 import { makeId, nowIso, nowTime } from "../lib/format";
-import { loadState, saveState } from "../lib/storage";
+import { readState, saveState, type StorageIssue } from "../lib/storage";
+import { parseAudit, parseComments, parseTasks } from "../lib/stateValidation";
 import type {
   AuditAction,
   AuditItem,
@@ -123,12 +124,14 @@ function normalizeTasks(tasks: Task[]): Task[] {
   }));
 }
 
-function getInitialState(): StoreState {
+function getInitialState(): { state: StoreState; issue: StorageIssue | null } {
   const seed = getSeedState();
+  const tasks = readState("tasks", seed.tasks, parseTasks);
+  const comments = readState("comments", seed.comments, parseComments);
+  const audit = readState("audit", seed.audit, parseAudit);
   return {
-    tasks: normalizeTasks(loadState("tasks", seed.tasks)),
-    comments: loadState("comments", seed.comments),
-    audit: loadState("audit", seed.audit),
+    state: { tasks: tasks.value, comments: comments.value, audit: audit.value },
+    issue: tasks.issue ?? comments.issue ?? audit.issue,
   };
 }
 
@@ -147,11 +150,21 @@ function makeAudit(action: AuditAction, detail?: string): AuditItem {
  * to localStorage and records an audit entry for each mutation.
  */
 export function useJiraStore() {
-  const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
+  const [initial] = useState(getInitialState);
+  const [state, dispatch] = useReducer(reducer, initial.state);
+  const [storageIssue, setStorageIssue] = useState(initial.issue);
+  const writesBlocked = useRef(initial.issue !== null);
 
-  useEffect(() => saveState("tasks", state.tasks), [state.tasks]);
-  useEffect(() => saveState("comments", state.comments), [state.comments]);
-  useEffect(() => saveState("audit", state.audit), [state.audit]);
+  useEffect(() => {
+    // A failed read must never turn into an automatic overwrite of user data.
+    // After any write failure, retain the current session for explicit export.
+    if (writesBlocked.current) return;
+    if (!saveState("tasks", state.tasks) || !saveState("comments", state.comments) ||
+        !saveState("audit", state.audit)) {
+      writesBlocked.current = true;
+      setStorageIssue("unavailable");
+    }
+  }, [state]);
 
   const createTask = useCallback((form: TaskFormState): Task => {
     const timestamp = nowIso();
@@ -388,7 +401,7 @@ export function useJiraStore() {
     ],
   );
 
-  return { ...state, ...actions };
+  return { ...state, ...actions, storageIssue };
 }
 
 export type JiraStore = ReturnType<typeof useJiraStore>;

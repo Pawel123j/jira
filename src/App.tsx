@@ -36,8 +36,8 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  useEffect(() => saveState("auth", isAuthenticated), [isAuthenticated]);
-  useEffect(() => saveState("view", view), [view]);
+  useEffect(() => { saveState("auth", isAuthenticated); }, [isAuthenticated]);
+  useEffect(() => { saveState("view", view); }, [view]);
 
   const visibleTasks = useMemo(() => {
     const query = filters.search.trim().toLowerCase();
@@ -195,6 +195,7 @@ export default function App() {
         style={{ backgroundImage: backgroundGradient(isDark) }}
       >
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
+        <StorageWarning issue={store.storageIssue} onExport={handleExport} />
         <LoginScreen theme={theme} onThemeChange={setTheme} onLogin={handleLogin} />
       </div>
     );
@@ -234,6 +235,7 @@ export default function App() {
         </div>
 
         <main className="space-y-4 p-4 sm:p-6">
+          <StorageWarning issue={store.storageIssue} onExport={handleExport} />
           <Topbar
             view={view}
             onViewChange={setView}
@@ -276,6 +278,27 @@ export default function App() {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function StorageWarning({ issue, onExport }: {
+  issue: "invalid" | "unavailable" | null;
+  onExport: () => void;
+}) {
+  if (!issue) return null;
+  return (
+    <div role="alert" className="m-4 rounded-xl border border-amber-500 bg-amber-50 p-4 text-amber-950 dark:bg-amber-950 dark:text-amber-100">
+      <p className="font-semibold">Zmiany nie są zapisywane w przeglądarce.</p>
+      <p>
+        {issue === "invalid"
+          ? "Zapisane dane mają nieprawidłowy format. Oryginał pozostawiono bez zmian. "
+          : "Nie można odczytać lub zapisać danych. Ostatnie zmiany mogą być niezapisane. "}
+        Pracujesz w pamięci tej karty. Przed jej zamknięciem wyeksportuj bieżącą sesję.
+      </p>
+      <button type="button" className="mt-2 rounded px-2 py-1 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={onExport}>
+        Eksportuj bieżącą sesję
+      </button>
     </div>
   );
 }

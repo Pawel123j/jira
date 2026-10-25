@@ -49,6 +49,8 @@ function verifyPatchedBraces(node) {
   assert.ok(braces.compile('{a,b}'.repeat(1000)));
   checked.add(node);
 }
+// Verify the committed source patch even when the advisory feed omits it.
+verifyPatchedBraces('node_modules/braces');
 const failures = [];
 for (const vulnerability of Object.values(report.vulnerabilities)) {
   for (const advisory of vulnerability.via) {
