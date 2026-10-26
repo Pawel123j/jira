@@ -40,4 +40,14 @@ describe("parseImport", () => {
     expect(parsed?.comments).toEqual({});
     expect(parsed?.audit).toEqual([]);
   });
+
+  it.each([
+    { tasks: [{ ...initialTasks[0], tags: null }] },
+    { tasks: [{ ...initialTasks[0], status: "Unknown" }] },
+    { tasks: [initialTasks[0], initialTasks[0]] },
+    { tasks: initialTasks, comments: { "1": {} } },
+    { tasks: initialTasks, audit: [null] },
+  ])("rejects malformed import instead of persisting broken UI data: %j", (payload) => {
+    expect(parseImport(JSON.stringify(payload))).toBeNull();
+  });
 });

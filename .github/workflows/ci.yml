@@ -38,7 +38,9 @@ jobs:
         run: npm run security:check
 
       - name: Test
-        run: npm test
+        run: |
+          npm run test:security
+          npm test
 
       - name: Build
         run: npm run build

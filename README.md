@@ -3,6 +3,22 @@
 Lekki menedżer zadań inspirowany Jirą — zbudowany w **React + TypeScript + Vite + Tailwind CSS**.
 Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w `localStorage`.
 
+### Gdy zapis jest uszkodzony lub niedostępny
+
+Zadania (także pola zagnieżdżone), komentarze i audit log są sprawdzane przed użyciem.
+Niepoprawny JSON lub struktura danych nie uruchamia automatycznego resetu zapisów:
+oryginalne wartości pozostają w przeglądarce, a aplikacja pokazuje stałe ostrzeżenie
+i działa wyłącznie w pamięci karty. Odmowa dostępu lub brak miejsca również
+zatrzymuje dalszy automatyczny zapis. Przed zamknięciem karty użyj przycisku
+**Eksportuj bieżącą sesję** w ostrzeżeniu. Ten plik zawiera stan bieżącej sesji,
+nie kopię uszkodzonego oryginału.
+
+Przed ręczną naprawą zachowaj osobną kopię istniejących kluczy `mini-jira:tasks`,
+`mini-jira:comments` i `mini-jira:audit` z narzędzi przeglądarki. Nie usuwaj ich
+bez kopii. Po przywróceniu prawidłowego zapisu/uprawnień odśwież stronę i importuj
+wyeksportowaną sesję. Reset demo w trybie pamięciowym nie nadpisuje uszkodzonego
+oryginału. Starsze zadania bez pól `points` i `subtasks` pozostają obsługiwane.
+
 > Wcześniej projekt był pojedynczym plikiem `mini jira.jsx`, który nie dało się
 > uruchomić. Został przebudowany na pełnoprawną, modularną aplikację.
 
@@ -59,13 +75,14 @@ aplikacji z tego commita, nie makieta.
 ## 🚀 Uruchomienie
 
 ```bash
-npm install      # instalacja zależności
+npm ci           # odtwarzalna instalacja zależności (Node.js 24.15+ w linii 24)
 npm run dev      # serwer deweloperski (http://localhost:5173)
 npm run build    # produkcyjny build do dist/
 npm run preview  # podgląd builda produkcyjnego
 npm run typecheck# sprawdzenie typów (tsc -b)
 npm run lint     # ESLint
 npm test         # testy jednostkowe (Vitest)
+npm run test:security # regresja bramki także przy pustej odpowiedzi advisory
 npm run test:watch # testy w trybie watch
 ```
 
@@ -73,7 +90,7 @@ npm run test:watch # testy w trybie watch
 
 - **Vitest + React Testing Library** (środowisko `jsdom`). Testy obejmują
   helpery (`format`, `sort`, `stats`, `exportImport`), store (`useJiraStore`)
-  oraz komponenty (logowanie, Kanban, podzadania, filtry) — łącznie 45 testów.
+  oraz komponenty (logowanie, Kanban, podzadania, filtry) — łącznie 79 testów.
 - **Error boundary** — nieoczekiwane błędy pokazują przyjazny ekran zamiast
   pustej strony.
 - **GitHub Actions** (`.github/workflows/ci.yml`) na każdy push i PR uruchamia
@@ -123,6 +140,7 @@ src/
     format.ts             # formatowanie dat, isOverdue, makeId
     labels.ts             # polskie etykiety akcji i ról
     storage.ts            # bezpieczny wrapper na localStorage
+    stateValidation.ts    # walidacja zapisów i importu, zgodność starszych zadań
     sort.ts               # sortowanie listy zadań
     stats.ts              # agregacja story points
     exportImport.ts       # budowanie/parsowanie/pobieranie JSON
@@ -146,7 +164,8 @@ src/
 
 - **Stan zadań** trzyma `useJiraStore` (oparty na `useReducer`). Każda mutacja
   jest czysta, automatycznie dopisuje wpis do audit logu i zapisuje stan do
-  `localStorage`.
+  `localStorage`, jeśli odczytane dane są prawidłowe i zapis jest dostępny.
+  Niepowodzenie uruchamia jawny tryb pamięciowy z możliwością eksportu sesji.
 - **Motywowanie** opiera się na wariancie `dark:` Tailwinda — przełącznik dodaje/usuwa
   klasę `dark` na `<html>`, więc nie ma rozjazdu warunkowych klas w komponentach.
 - **Formularze** (tworzenie/edycja) używają wspólnego `TaskForm`. Panel edycji
@@ -156,9 +175,34 @@ src/
 
 React 18 · TypeScript 5 · Vite 8 · Tailwind CSS 3 · Vitest 5 · ESLint
 
+Środowisko lokalne i wszystkie workflow używają **Node.js 24** (co najmniej
+24.15.0, zgodnie z wymaganiami jsdom). `npm ci` instaluje wersje z lockfile;
+Vite/Vitest/jsdom są utrzymywane w dotychczasowych głównych wersjach.
+
 ## 📄 Licencja
 
 MIT — patrz [LICENSE](LICENSE).
+
+## Regresje zapisu — JIRA-01
+
+`npm test`: **79 testów PASS**, w tym niepoprawne typy i zagnieżdżone pola,
+komentarze/audit, uszkodzony JSON, zachowanie oryginału po edycji i ponownym
+otwarciu, odmowa odczytu, quota/odmowa zapisu, zgodność starszych zadań,
+prawidłowy zapis po odświeżeniu i widoczne ostrzeżenie przed logowaniem.
+Lint, typecheck oraz build produkcyjny przechodzą. Te regresje wykonano w JSDOM;
+nie zastępują pełnego browser E2E ani bramki bezpieczeństwa zależności.
+
+## Zależności i odtworzenie instalacji — 2026-10-25
+
+Świeże `npm ci` w osobnym katalogu przeszło z Node 24.19.0. Zależności:
+Vite 8.3.5, Vitest/mocker 5.0.5, jsdom 30.1.3 i undici 8.12.3.
+`npm audit` zwróciło 0 zgłoszeń w tej dacie; `security:check` dodatkowo
+sprawdziło poprawkę i regresje `braces`. Osobny test `test:security` potwierdza,
+że pusta odpowiedź bazy advisory nie przepuści brakującej poprawki.
+79 testów aplikacji, test bramki, lint, typecheck i produkcyjny build przeszły.
+Wynik jest lokalny: nie oznacza nowego wykonania GitHub Actions, wdrożenia Pages
+ani browser E2E. Ostrzeżenia deprecation starszego ESLint i jego narzędzi
+pozostają zadaniem utrzymaniowym; nie są maskowane przez wyłączenie audytu.
 
 ## Weryfikacja środowiska — 2026-10-17
 
@@ -183,6 +227,6 @@ Na Linux może być potrzebne `python -m playwright install --with-deps chromium
 
 ## Walidacja etapu 2 — 2026-10-18
 
-Bramka `npm run security:check` sprawdza pełny audyt, integralność poprawki parsera `braces` i regresje złośliwych wzorców. Surowy `npm audit` nadal zgłasza tę poprawioną lokalnie zależność; szczegóły i termin 2026-11-18 opisano w [SECURITY_PATCH.md](SECURITY_PATCH.md). `npm ci` stosuje patch automatycznie i przerywa pracę, jeśli nie pasuje.
+Bramka `npm run security:check` sprawdza pełny audyt, integralność poprawki parsera `braces` i regresje złośliwych wzorców **niezależnie od obecności zgłoszenia w bieżącej bazie advisory**. Surowy `npm audit` może nadal zgłaszać tę poprawioną lokalnie zależność; szczegóły i termin 2026-11-18 opisano w [SECURITY_PATCH.md](SECURITY_PATCH.md). `npm ci` stosuje patch automatycznie i przerywa pracę, jeśli nie pasuje.
 
 Poprawiono kontrast ukończonych podzadań. E2E obejmuje CRUD/reload, logowanie klawiaturą oraz axe na ekranie logowania, tablicy i edycji. Lokalnie: 45 testów, lint/typy/build, bramka bezpieczeństwa i 1 E2E PASS. To lokalny menedżer zadań; role demonstracyjne nie tworzą serwerowej granicy uprawnień.
