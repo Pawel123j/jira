@@ -28,16 +28,16 @@ export default function App() {
   const store = useJiraStore();
 
   const [isAuthenticated, setIsAuthenticated] = useState(() =>
-    loadState("auth", false),
+    loadState<boolean>("auth", false) === true,
   );
-  const [view, setView] = useState<AppView>(() => loadState<AppView>("view", "list"));
+  const [view, setView] = useState<AppView>(() => { const saved = loadState<AppView>("view", "list"); return ["list", "board", "dashboard"].includes(saved) ? saved : "list"; });
   const [filters, setFilters] = useState<FiltersState>(defaultFilters);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>("2");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  useEffect(() => saveState("auth", isAuthenticated), [isAuthenticated]);
-  useEffect(() => saveState("view", view), [view]);
+  useEffect(() => { saveState("auth", isAuthenticated); }, [isAuthenticated]);
+  useEffect(() => { saveState("view", view); }, [view]);
 
   const visibleTasks = useMemo(() => {
     const query = filters.search.trim().toLowerCase();
@@ -96,7 +96,7 @@ export default function App() {
 
   const handleSave = (id: string, form: TaskFormState): boolean => {
     const updated = store.updateTask(id, form);
-    if (updated) showToast(`Zapisano task: ${updated.title}`);
+    if (updated) showToast(`Zaktualizowano task: ${updated.title}`);
     return Boolean(updated);
   };
 
@@ -241,6 +241,14 @@ export default function App() {
             onOpenHelp={() => setHelpOpen(true)}
           />
 
+          {store.saveError && <div role="status" className="rounded-2xl border border-amber-500 bg-amber-50 p-4 text-slate-900 dark:bg-amber-950 dark:text-white">
+            <p>{store.saveError}</p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <button className="min-h-11 underline" onClick={() => { if (!store.recoveryRaw || window.confirm("Zapis zastąpi poprzednie dane. Najpierw pobierz oryginał do odzyskania. Kontynuować?")) store.retrySave(); }}>Ponów zapis</button>
+              <button className="min-h-11 underline" onClick={handleExport}>Eksport bieżących danych</button>
+              {store.recoveryRaw && <button className="min-h-11 underline" onClick={store.downloadRecovery}>Pobierz oryginalny zapis</button>}
+            </div>
+          </div>}
           {view === "list" && (
             <ListView
               filters={filters}

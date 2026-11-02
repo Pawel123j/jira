@@ -14,7 +14,7 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
   - **Tablica Kanban** — kolumny `To do / In progress / Done` z **przeciąganiem** (drag & drop) do zmiany statusu.
   - **Dashboard** — statystyki: liczba zadań, ukończone, po terminie, soft deleted, rozkład wg statusu i priorytetu oraz pasek postępu.
 - **Zarządzanie zadaniami**: tworzenie, edycja, soft delete + przywracanie oraz **trwałe usuwanie z modalem potwierdzenia**, priorytety, terminy, przypisani, tagi.
-- **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, na nagłówku kolumny licznik zadań, suma story points (`Σ`) i licznik zadań po terminie. Karty można też przenosić **przyciskami ◀ ▶** (dostępność z klawiatury, bez drag & drop).
+- **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, na nagłówku kolumny licznik zadań, suma story points (`Σ`) i licznik zadań po terminie. Karty można też przenosić przyciskami z nazwą kolumny docelowej (dostępność klawiaturą i większe cele dotykowe).
 - **Podzadania / checklisty** w zadaniu z paskiem postępu i licznikiem `done/total` widocznym także na kafelku.
 - **Story points (estymaty)** — pole w formularzu, znacznik na kafelku oraz podsumowanie zrobione/łącznie na dashboardzie.
 - **Komentarze** do zadań.
@@ -22,7 +22,8 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
 - **Filtrowanie na żywo** po tekście, statusie, priorytecie, widoczności usuniętych oraz **„Tylko moje”** (zadania przypisane do zalogowanego użytkownika) + **paginacja** („Pokaż więcej”).
 - **Sortowanie listy** wg priorytetu, terminu, ostatniej zmiany lub tytułu (nie narusza ręcznej kolejności na tablicy Kanban).
 - **Eksport / import danych** do pliku JSON (kopia zapasowa stanu).
-- **Trwałość danych** — zadania, komentarze, audit log, motyw, widok i sesja zapisywane w `localStorage`.
+- **Trwałość danych** — zadania, komentarze i audit log są zapisywane razem jako wersjonowany snapshot; motyw, widok i sesja mają osobne ustawienia w `localStorage`.
+- **Odzyskiwanie danych** — niepoprawny zapis legacy nie nadpisuje się przy starcie; aplikacja pokazuje dane demo, udostępnia oryginał do pobrania i wymaga świadomego potwierdzenia przed zastąpieniem. Błąd zapisu utrzymuje zmiany w bieżącej karcie i pokazuje ponowienie.
 - **Skróty klawiszowe**: `1` / `2` / `3` przełączają widoki, `/` ustawia fokus w wyszukiwarce, `?` otwiera okno z pomocą skrótów.
 - **Motyw jasny/ciemny** (Tailwind `dark` mode).
 - **Powiadomienia** jako stos toastów z auto-znikaniem.
@@ -73,13 +74,12 @@ npm run test:watch # testy w trybie watch
 
 - **Vitest + React Testing Library** (środowisko `jsdom`). Testy obejmują
   helpery (`format`, `sort`, `stats`, `exportImport`), store (`useJiraStore`)
-  oraz komponenty (logowanie, Kanban, podzadania, filtry) — łącznie 45 testów.
+  oraz komponenty (logowanie, Kanban, podzadania, filtry) — łącznie 58 testów.
 - **Error boundary** — nieoczekiwane błędy pokazują przyjazny ekran zamiast
   pustej strony.
 - **GitHub Actions** (`.github/workflows/ci.yml`) na każdy push i PR uruchamia
   kolejno: `lint → typecheck → audyt zależności → test → build`.
-- **`npm audit` zwraca 0 podatności.** CI blokuje merge przy poziomie `high`
-  lub wyższym.
+- CI blokuje merge przy podatnościach poziomu `high` lub wyższego.
 
 ## 🌐 Wdrożenie
 
@@ -160,9 +160,9 @@ React 18 · TypeScript 5 · Vite 8 · Tailwind CSS 3 · Vitest 5 · ESLint
 
 MIT — patrz [LICENSE](LICENSE).
 
-## Weryfikacja środowiska — 2026-10-17
+## Weryfikacja środowiska — 2026-11-02
 
-Sprawdzono lokalne demo: logowanie, utworzenie, wyszukiwanie, edycję, zapis po odświeżeniu i trwałe usunięcie zadania w Chromium. `npm run lint`, `npm run typecheck`, `npm test` (45 testów) i build przechodzą. Test przeglądarkowy jest w `e2e/`, uruchamiany przez `.github/workflows/browser.yml`.
+`npm run lint`, `npm run typecheck`, `npm test` (58 testów) i `npm run build` przechodzą. Dwa testy Playwright w `e2e/` sprawdzają operacje na zadaniach, zapis po odświeżeniu, klawiaturę, dostępność oraz odzyskiwanie niepoprawnego zapisu; oba przechodzą w Chromium. Zrzut mobilnego Kanbana w README został ponownie zrobiony na bieżącym buildzie.
 
 Logowanie oraz role w aplikacji lokalnej nie stanowią zabezpieczenia serwera. Dane pozostają w przeglądarce. Hosting publiczny i współpraca wielu użytkowników nie zostały zweryfikowane. Audyt npm nadal zgłasza zależności narzędziowe Tailwind/ESLint; aktualizacja samego lockfile nie usuwa wszystkich zgłoszeń.
 
@@ -181,8 +181,8 @@ python -m pytest -q e2e
 
 Na Linux może być potrzebne `python -m playwright install --with-deps chromium` z uprawnieniami administratora. Alternatywnie `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` wskazuje istniejący Chromium. Testy uruchamiają i zatrzymują własny serwer, używają nowego kontekstu przeglądarki i zapisują logi w ignorowanym `e2e/artifacts/`. Pełny backend musi mieć zainstalowane swoje zależności; `E2E_API_PYTHON` jest opcjonalnym wyborem jego interpretera w AutoDesk/BankGuard. Testy nie uruchamiają wdrożenia.
 
-## Walidacja etapu 2 — 2026-10-18
+## Weryfikacja danych
 
 Bramka `npm run security:check` sprawdza pełny audyt, integralność poprawki parsera `braces` i regresje złośliwych wzorców. Surowy `npm audit` nadal zgłasza tę poprawioną lokalnie zależność; szczegóły i termin 2026-11-18 opisano w [SECURITY_PATCH.md](SECURITY_PATCH.md). `npm ci` stosuje patch automatycznie i przerywa pracę, jeśli nie pasuje.
 
-Poprawiono kontrast ukończonych podzadań. E2E obejmuje CRUD/reload, logowanie klawiaturą oraz axe na ekranie logowania, tablicy i edycji. Lokalnie: 45 testów, lint/typy/build, bramka bezpieczeństwa i 1 E2E PASS. To lokalny menedżer zadań; role demonstracyjne nie tworzą serwerowej granicy uprawnień.
+Wartości logowania służą wyłącznie do wejścia do demonstracyjnego interfejsu. Nie ma serwerowej granicy uprawnień ani współdzielenia danych między użytkownikami. Zachowaj JSON jako kopię zapasową przed wyczyszczeniem danych przeglądarki.

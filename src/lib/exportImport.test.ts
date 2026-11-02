@@ -41,3 +41,10 @@ describe("parseImport", () => {
     expect(parsed?.audit).toEqual([]);
   });
 });
+
+
+describe("reject malformed snapshots before mutating data", () => {
+  it.each([null, {}, [null], { tasks: [null] }, { tasks: [{ ...initialTasks[0], status: "unknown" }] }, { tasks: [{ ...initialTasks[0], due: "2026-02-31" }] }, { tasks: [initialTasks[0], initialTasks[0]] }, { version: 9, tasks: [] }, { tasks: [], comments: { missing: [] } }])("rejects %j", (payload) => {
+    expect(parseImport(JSON.stringify(payload))).toBeNull();
+  });
+});
