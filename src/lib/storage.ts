@@ -16,11 +16,12 @@ export function loadState<T>(key: string, fallback: T): T {
   }
 }
 
-export function saveState<T>(key: string, value: T): void {
-  if (typeof window === "undefined") return;
+export function saveState<T>(key: string, value: T): boolean {
+  if (typeof window === "undefined") return false;
   try {
     window.localStorage.setItem(PREFIX + key, JSON.stringify(value));
+    return true;
   } catch {
-    // Ignore write failures (e.g. storage full or disabled).
+    return false;
   }
 }

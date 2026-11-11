@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import {
   currentUser,
   initialAudit,
@@ -6,7 +6,7 @@ import {
   initialTasks,
 } from "../data/seed";
 import { makeId, nowIso, nowTime } from "../lib/format";
-import { loadState, saveState } from "../lib/storage";
+import { saveState } from "../lib/storage";
 import type {
   AuditAction,
   AuditItem,
@@ -18,9 +18,13 @@ import type {
   TaskStatus,
 } from "../types";
 
+import { buildExport, parseImport } from "../lib/exportImport";
+
 const MAX_AUDIT_ENTRIES = 12;
 
 interface StoreState {
+  recoveryRaw?: string;
+  storageIssue?: string;
   tasks: Task[];
   comments: Record<string, CommentItem[]>;
   audit: AuditItem[];
@@ -125,11 +129,26 @@ function normalizeTasks(tasks: Task[]): Task[] {
 
 function getInitialState(): StoreState {
   const seed = getSeedState();
-  return {
-    tasks: normalizeTasks(loadState("tasks", seed.tasks)),
-    comments: loadState("comments", seed.comments),
-    audit: loadState("audit", seed.audit),
-  };
+  const raw: Record<string, string | null> = {};
+  try {
+    raw.snapshot = window.localStorage.getItem("mini-jira:snapshot");
+    if (raw.snapshot !== null) {
+      const parsed = parseImport(raw.snapshot);
+      if (!parsed) throw new Error("Invalid snapshot");
+      return parsed;
+    }
+    for (const key of ["tasks", "comments", "audit"]) raw[key] = window.localStorage.getItem(`mini-jira:${key}`);
+    const legacy = {
+      tasks: raw.tasks === null ? seed.tasks : JSON.parse(raw.tasks),
+      comments: raw.comments === null ? seed.comments : JSON.parse(raw.comments),
+      audit: raw.audit === null ? seed.audit : JSON.parse(raw.audit),
+    };
+    const parsed = parseImport(JSON.stringify(legacy));
+    if (!parsed) throw new Error("Invalid legacy state");
+    return parsed;
+  } catch {
+    return { ...seed, recoveryRaw: JSON.stringify(raw, null, 2), storageIssue: "Nie można odczytać zapisu. Wyświetlono dane demonstracyjne. Oryginalne dane zachowano do odzyskania." };
+  }
 }
 
 function makeAudit(action: AuditAction, detail?: string): AuditItem {
@@ -149,9 +168,20 @@ function makeAudit(action: AuditAction, detail?: string): AuditItem {
 export function useJiraStore() {
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
 
-  useEffect(() => saveState("tasks", state.tasks), [state.tasks]);
-  useEffect(() => saveState("comments", state.comments), [state.comments]);
-  useEffect(() => saveState("audit", state.audit), [state.audit]);
+  const [recoveryRaw] = useState(state.recoveryRaw);
+  const [saveError, setSaveError] = useState(state.storageIssue ?? "");
+  const [recoveryAccepted, setRecoveryAccepted] = useState(!state.storageIssue);
+  const retrySave = useCallback(() => {
+    const ok = saveState("snapshot", buildExport(state.tasks, state.comments, state.audit));
+    setSaveError(ok ? "" : "Nie zapisano zmian. Pracujesz w tej karcie; pobierz eksport przed jej zamknięciem.");
+    if (ok) setRecoveryAccepted(true);
+    return ok;
+  }, [state.tasks, state.comments, state.audit]);
+  useEffect(() => { if (recoveryAccepted) retrySave(); }, [recoveryAccepted, retrySave]);
+  const downloadRecovery = useCallback(() => {
+    const url = URL.createObjectURL(new Blob([recoveryRaw ?? ""], { type: "application/json" }));
+    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "mini-jira-recovery.json"; anchor.click(); URL.revokeObjectURL(url);
+  }, [recoveryRaw]);
 
   const createTask = useCallback((form: TaskFormState): Task => {
     const timestamp = nowIso();
@@ -350,9 +380,11 @@ export function useJiraStore() {
   );
 
   const importData = useCallback((payload: ExportPayload) => {
+    const valid = parseImport(JSON.stringify(payload));
+    if (!valid) return false;
     dispatch({
       type: "IMPORT_DATA",
-      payload,
+      payload: valid,
       audit: makeAudit("DATA_IMPORTED", `${payload.tasks.length} zadań`),
     });
   }, []);
@@ -388,7 +420,7 @@ export function useJiraStore() {
     ],
   );
 
-  return { ...state, ...actions };
+  return { ...state, ...actions, saveError, retrySave, recoveryRaw, downloadRecovery };
 }
 
 export type JiraStore = ReturnType<typeof useJiraStore>;
