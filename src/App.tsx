@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LoginScreen } from "./components/auth/LoginScreen";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
+import { ConfirmDialog } from "./components/ui/ConfirmDialog";
 import { ShortcutsDialog } from "./components/ui/ShortcutsDialog";
 import { ToastStack } from "./components/ui/Toast";
 import { Dashboard } from "./components/views/Dashboard";
@@ -17,6 +18,7 @@ import { loadState, saveState } from "./lib/storage";
 import type {
   AppView,
   FiltersState,
+  ExportPayload,
   Task,
   TaskFormState,
   TaskStatus,
@@ -35,6 +37,7 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>("2");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [pendingImport, setPendingImport] = useState<ExportPayload | null>(null);
 
   useEffect(() => { saveState("auth", isAuthenticated); }, [isAuthenticated]);
   useEffect(() => { saveState("view", view); }, [view]);
@@ -150,14 +153,35 @@ export default function App() {
         showToast("Nieprawidłowy plik — import przerwany.");
         return;
       }
-      store.importData(payload);
-      setSelectedTaskId(payload.tasks[0]?.id ?? null);
-      setFilters(defaultFilters);
-      showToast(`Zaimportowano ${payload.tasks.length} zadań.`);
+      setPendingImport(payload);
+      setSidebarOpen(false);
     };
     reader.onerror = () => showToast("Nie udało się odczytać pliku.");
     reader.readAsText(file);
   };
+
+  const confirmImport = () => {
+    if (!pendingImport) return;
+    if (!store.importData(pendingImport)) {
+      showToast("Nie zapisano importu. Poprzednie dane pozostawiono bez zmian.");
+      return;
+    }
+    setSelectedTaskId(pendingImport.tasks[0]?.id ?? null);
+    setFilters(defaultFilters);
+    showToast(`Zaimportowano ${pendingImport.tasks.length} zadań.`);
+    setPendingImport(null);
+  };
+
+  const storageWarning = (
+    <StorageWarning
+      issue={store.storageIssue}
+      onExport={handleExport}
+      onRetry={() => {
+        if (!store.recoveryRaw || window.confirm("Zapis zastąpi poprzednie dane. Najpierw pobierz oryginał do odzyskania. Kontynuować?")) store.retrySave();
+      }}
+      onRecovery={store.recoveryRaw ? store.downloadRecovery : undefined}
+    />
+  );
 
   const handleResetDemo = () => {
     store.resetDemo();
@@ -186,7 +210,7 @@ export default function App() {
     }),
     [],
   );
-  useKeyboardShortcuts(shortcuts, isAuthenticated);
+  useKeyboardShortcuts(shortcuts, isAuthenticated && !pendingImport && !helpOpen);
 
   if (!isAuthenticated) {
     return (
@@ -195,6 +219,7 @@ export default function App() {
         style={{ backgroundImage: backgroundGradient(isDark) }}
       >
         <ToastStack toasts={toasts} onDismiss={dismissToast} />
+        {storageWarning}
         <LoginScreen theme={theme} onThemeChange={setTheme} onLogin={handleLogin} />
       </div>
     );
@@ -207,6 +232,14 @@ export default function App() {
     >
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
       <ShortcutsDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <ConfirmDialog
+        open={pendingImport !== null}
+        title="Podgląd importu"
+        description={pendingImport ? `Zadania: ${pendingImport.tasks.length}. Komentarze: ${Object.values(pendingImport.comments).reduce((total, entries) => total + entries.length, 0)}. Podzadania: ${pendingImport.tasks.reduce((total, task) => total + task.subtasks.length, 0)}. Wpisy historii: ${pendingImport.audit.length}. Potwierdzenie zastąpi bieżące dane. Najpierw wyeksportuj je, jeśli chcesz zachować kopię.` : undefined}
+        confirmLabel="Zastąp dane"
+        onConfirm={confirmImport}
+        onCancel={() => setPendingImport(null)}
+      />
 
       <div className="lg:grid lg:grid-cols-[320px_1fr]">
         {sidebarOpen && (
@@ -234,6 +267,7 @@ export default function App() {
         </div>
 
         <main className="space-y-4 p-4 sm:p-6">
+          {storageWarning}
           <Topbar
             view={view}
             onViewChange={setView}
@@ -241,14 +275,6 @@ export default function App() {
             onOpenHelp={() => setHelpOpen(true)}
           />
 
-          {store.saveError && <div role="status" className="rounded-2xl border border-amber-500 bg-amber-50 p-4 text-slate-900 dark:bg-amber-950 dark:text-white">
-            <p>{store.saveError}</p>
-            <div className="mt-2 flex flex-wrap gap-3">
-              <button className="min-h-11 underline" onClick={() => { if (!store.recoveryRaw || window.confirm("Zapis zastąpi poprzednie dane. Najpierw pobierz oryginał do odzyskania. Kontynuować?")) store.retrySave(); }}>Ponów zapis</button>
-              <button className="min-h-11 underline" onClick={handleExport}>Eksport bieżących danych</button>
-              {store.recoveryRaw && <button className="min-h-11 underline" onClick={store.downloadRecovery}>Pobierz oryginalny zapis</button>}
-            </div>
-          </div>}
           {view === "list" && (
             <ListView
               filters={filters}
@@ -284,6 +310,31 @@ export default function App() {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+function StorageWarning({ issue, onExport, onRetry, onRecovery }: {
+  issue: "invalid" | "unavailable" | null;
+  onExport: () => void;
+  onRetry: () => void;
+  onRecovery?: () => void;
+}) {
+  if (!issue) return null;
+  return (
+    <div role="alert" className="m-4 rounded-xl border border-amber-500 bg-amber-50 p-4 text-amber-950 dark:bg-amber-950 dark:text-amber-100">
+      <p className="font-semibold">Zmiany nie są zapisywane w przeglądarce.</p>
+      <p>
+        {issue === "invalid"
+          ? "Zapisane dane mają nieprawidłowy format. Oryginał pozostawiono bez zmian. "
+          : "Nie można odczytać lub zapisać danych. Ostatnie zmiany mogą być niezapisane. "}
+        Pracujesz w pamięci tej karty. Przed jej zamknięciem wyeksportuj bieżącą sesję.
+      </p>
+      <button type="button" className="mt-2 rounded px-2 py-1 font-semibold underline focus-visible:outline focus-visible:outline-2" onClick={onExport}>
+        Eksportuj bieżącą sesję
+      </button>
+      <button type="button" className="ml-3 mt-2 min-h-11 underline" onClick={onRetry}>Ponów zapis</button>
+      {onRecovery && <button type="button" className="ml-3 mt-2 min-h-11 underline" onClick={onRecovery}>Pobierz oryginalny zapis</button>}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "./Button";
 
 interface ConfirmDialogProps {
@@ -21,13 +21,31 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const buttons = dialogRef.current?.querySelectorAll<HTMLButtonElement>("button");
+    buttons?.[0]?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCancel();
+      if (event.key === "Tab" && buttons?.length) {
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      previousFocus?.focus();
+    };
   }, [open, onCancel]);
 
   if (!open) return null;
@@ -40,16 +58,18 @@ export function ConfirmDialog({
         aria-hidden="true"
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
+        aria-describedby={description ? "confirm-description" : undefined}
         className="relative w-full max-w-sm animate-pop-in rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
       >
         <h2 id="confirm-title" className="text-lg font-bold">
           {title}
         </h2>
         {description ? (
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <p id="confirm-description" className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             {description}
           </p>
         ) : null}
@@ -57,7 +77,7 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button variant="danger" autoFocus onClick={onConfirm}>
+          <Button variant="danger" onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </div>

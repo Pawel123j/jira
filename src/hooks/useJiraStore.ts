@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   currentUser,
   initialAudit,
@@ -6,7 +6,7 @@ import {
   initialTasks,
 } from "../data/seed";
 import { makeId, nowIso, nowTime } from "../lib/format";
-import { saveState } from "../lib/storage";
+import { saveState, type StorageIssue } from "../lib/storage";
 import type {
   AuditAction,
   AuditItem,
@@ -20,11 +20,7 @@ import type {
 
 import { buildExport, parseImport } from "../lib/exportImport";
 
-const MAX_AUDIT_ENTRIES = 12;
-
 interface StoreState {
-  recoveryRaw?: string;
-  storageIssue?: string;
   tasks: Task[];
   comments: Record<string, CommentItem[]>;
   audit: AuditItem[];
@@ -37,11 +33,11 @@ type Action =
   | { type: "DELETE_TASK"; id: string; audit: AuditItem }
   | { type: "MOVE_TASK"; tasks: Task[]; audit: AuditItem | null }
   | { type: "ADD_COMMENT"; taskId: string; comment: CommentItem; audit: AuditItem }
-  | { type: "IMPORT_DATA"; payload: ExportPayload; audit: AuditItem }
+  | { type: "IMPORT_DATA"; state: StoreState }
   | { type: "RESET" };
 
 function withAudit(state: StoreState, entry: AuditItem): AuditItem[] {
-  return [entry, ...state.audit].slice(0, MAX_AUDIT_ENTRIES);
+  return [entry, ...state.audit];
 }
 
 function reducer(state: StoreState, action: Action): StoreState {
@@ -95,14 +91,7 @@ function reducer(state: StoreState, action: Action): StoreState {
         audit: withAudit(state, action.audit),
       };
     case "IMPORT_DATA":
-      return {
-        tasks: normalizeTasks(action.payload.tasks),
-        comments: action.payload.comments,
-        audit: [action.audit, ...action.payload.audit].slice(
-          0,
-          MAX_AUDIT_ENTRIES,
-        ),
-      };
+      return action.state;
     case "RESET":
       return getSeedState();
     default:
@@ -118,36 +107,39 @@ function getSeedState(): StoreState {
   };
 }
 
-/** Ensure tasks from older storage/imports have all required fields. */
-function normalizeTasks(tasks: Task[]): Task[] {
-  return tasks.map((task) => ({
-    ...task,
-    points: typeof task.points === "number" ? task.points : 0,
-    subtasks: Array.isArray(task.subtasks) ? task.subtasks : [],
-  }));
+interface InitialState {
+  state: StoreState;
+  issue: StorageIssue | null;
+  recoveryRaw?: string;
 }
 
-function getInitialState(): StoreState {
+function getInitialState(): InitialState {
   const seed = getSeedState();
   const raw: Record<string, string | null> = {};
   try {
-    raw.snapshot = window.localStorage.getItem("mini-jira:snapshot");
-    if (raw.snapshot !== null) {
-      const parsed = parseImport(raw.snapshot);
-      if (!parsed) throw new Error("Invalid snapshot");
-      return parsed;
+    for (const key of ["snapshot", "tasks", "comments", "audit"]) {
+      raw[key] = window.localStorage.getItem(`mini-jira:${key}`);
     }
-    for (const key of ["tasks", "comments", "audit"]) raw[key] = window.localStorage.getItem(`mini-jira:${key}`);
-    const legacy = {
-      tasks: raw.tasks === null ? seed.tasks : JSON.parse(raw.tasks),
-      comments: raw.comments === null ? seed.comments : JSON.parse(raw.comments),
-      audit: raw.audit === null ? seed.audit : JSON.parse(raw.audit),
-    };
-    const parsed = parseImport(JSON.stringify(legacy));
-    if (!parsed) throw new Error("Invalid legacy state");
-    return parsed;
   } catch {
-    return { ...seed, recoveryRaw: JSON.stringify(raw, null, 2), storageIssue: "Nie można odczytać zapisu. Wyświetlono dane demonstracyjne. Oryginalne dane zachowano do odzyskania." };
+    return { state: seed, issue: "unavailable", recoveryRaw: JSON.stringify(raw, null, 2) };
+  }
+  try {
+    if (raw.snapshot !== null) {
+      const snapshot = parseImport(raw.snapshot);
+      if (!snapshot) throw new Error("Invalid snapshot");
+      return { state: snapshot, issue: null };
+    }
+    const hasLegacy = [raw.tasks, raw.comments, raw.audit].some(value => value !== null);
+    if (!hasLegacy) return { state: seed, issue: null };
+    const legacy = parseImport(JSON.stringify({
+      tasks: raw.tasks === null ? seed.tasks : JSON.parse(raw.tasks),
+      comments: raw.comments === null ? {} : JSON.parse(raw.comments),
+      audit: raw.audit === null ? [] : JSON.parse(raw.audit),
+    }));
+    if (!legacy) throw new Error("Invalid legacy state");
+    return { state: legacy, issue: null };
+  } catch {
+    return { state: seed, issue: "invalid", recoveryRaw: JSON.stringify(raw, null, 2) };
   }
 }
 
@@ -166,21 +158,40 @@ function makeAudit(action: AuditAction, detail?: string): AuditItem {
  * to localStorage and records an audit entry for each mutation.
  */
 export function useJiraStore() {
-  const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
+  const [initial] = useState(getInitialState);
+  const [state, dispatch] = useReducer(reducer, initial.state);
+  const [storageIssue, setStorageIssue] = useState(initial.issue);
+  const [saveError, setSaveError] = useState(initial.issue
+    ? "Nie można odczytać zapisu. Oryginalne dane zachowano do odzyskania."
+    : "");
+  const recoveryRaw = initial.recoveryRaw;
+  const writesBlocked = useRef(initial.issue !== null);
+  const lastSaved = useRef<StoreState | null>(null);
 
-  const [recoveryRaw] = useState(state.recoveryRaw);
-  const [saveError, setSaveError] = useState(state.storageIssue ?? "");
-  const [recoveryAccepted, setRecoveryAccepted] = useState(!state.storageIssue);
-  const retrySave = useCallback(() => {
-    const ok = saveState("snapshot", buildExport(state.tasks, state.comments, state.audit));
+  const persist = useCallback((next: StoreState) => {
+    const ok = saveState("snapshot", buildExport(next.tasks, next.comments, next.audit));
+    writesBlocked.current = !ok;
+    setStorageIssue(ok ? null : "unavailable");
     setSaveError(ok ? "" : "Nie zapisano zmian. Pracujesz w tej karcie; pobierz eksport przed jej zamknięciem.");
-    if (ok) setRecoveryAccepted(true);
+    if (ok) lastSaved.current = next;
     return ok;
-  }, [state.tasks, state.comments, state.audit]);
-  useEffect(() => { if (recoveryAccepted) retrySave(); }, [recoveryAccepted, retrySave]);
+  }, []);
+
+  const retrySave = useCallback(() => persist(state), [persist, state]);
+  useEffect(() => {
+    // Failed reads and writes never trigger automatic replacement of originals.
+    if (!writesBlocked.current && lastSaved.current !== state) persist(state);
+  }, [persist, state]);
+
   const downloadRecovery = useCallback(() => {
     const url = URL.createObjectURL(new Blob([recoveryRaw ?? ""], { type: "application/json" }));
-    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "mini-jira-recovery.json"; anchor.click(); URL.revokeObjectURL(url);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "mini-jira-recovery.json";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   }, [recoveryRaw]);
 
   const createTask = useCallback((form: TaskFormState): Task => {
@@ -379,15 +390,20 @@ export function useJiraStore() {
     [patchSubtasks],
   );
 
-  const importData = useCallback((payload: ExportPayload) => {
+  const importData = useCallback((payload: ExportPayload): boolean => {
     const valid = parseImport(JSON.stringify(payload));
     if (!valid) return false;
-    dispatch({
-      type: "IMPORT_DATA",
-      payload: valid,
-      audit: makeAudit("DATA_IMPORTED", `${payload.tasks.length} zadań`),
-    });
-  }, []);
+    const next: StoreState = {
+      tasks: valid.tasks,
+      comments: valid.comments,
+      audit: [makeAudit("DATA_IMPORTED", `${valid.tasks.length} zadań`), ...valid.audit],
+    };
+    // localStorage.setItem is atomic: commit the whole snapshot before replacing
+    // the visible board. Quota/security failures leave the previous session intact.
+    if (!persist(next)) return false;
+    dispatch({ type: "IMPORT_DATA", state: next });
+    return true;
+  }, [persist]);
 
   const resetDemo = useCallback(() => dispatch({ type: "RESET" }), []);
 
@@ -420,7 +436,7 @@ export function useJiraStore() {
     ],
   );
 
-  return { ...state, ...actions, saveError, retrySave, recoveryRaw, downloadRecovery };
+  return { ...state, ...actions, storageIssue, saveError, retrySave, recoveryRaw, downloadRecovery };
 }
 
 export type JiraStore = ReturnType<typeof useJiraStore>;

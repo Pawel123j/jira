@@ -5,6 +5,9 @@ on:
     branches: ["**"]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -32,13 +35,14 @@ jobs:
         run: npm run typecheck
 
       - name: Audyt zależności
-        # Blokujemy na `high`, a nie na `low`: przy niższym progu pierwszy
-        # nowy komunikat o podatności w dowolnej zależności deweloperskiej
-        # zapalałby CI na czerwono na commicie, którego nikt nie dotykał.
+        # Każda niezałatana podatność blokuje CI, niezależnie od poziomu.
+        # Jedyny wyjątek wymaga sprawdzenia dokładnej łatki i terminu przeglądu.
         run: npm run security:check
 
       - name: Test
-        run: npm test
+        run: |
+          npm run test:security
+          npm test
 
       - name: Build
         run: npm run build
