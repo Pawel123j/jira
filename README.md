@@ -227,6 +227,6 @@ Na Linux może być potrzebne `python -m playwright install --with-deps chromium
 
 ## Weryfikacja danych
 
-Bramka `npm run security:check` sprawdza pełny audyt, integralność poprawki parsera `braces` i regresje złośliwych wzorców **niezależnie od obecności zgłoszenia w bieżącej bazie advisory**. Surowy `npm audit` może nadal zgłaszać tę poprawioną lokalnie zależność; szczegóły i termin 2026-11-18 opisano w [SECURITY_PATCH.md](SECURITY_PATCH.md). `npm ci` stosuje patch automatycznie i przerywa pracę, jeśli nie pasuje.
+Bramka `npm run security:check` sprawdza pełny audyt, integralność poprawki parsera `braces` i regresje złośliwych wzorców **niezależnie od obecności zgłoszenia w bieżącej bazie advisory**. Surowy `npm audit` może nadal zgłaszać tę poprawioną lokalnie zależność; szczegóły i termin 2026-12-17 opisano w [SECURITY_PATCH.md](SECURITY_PATCH.md). `npm ci` stosuje patch automatycznie i przerywa pracę, jeśli nie pasuje.
 
 Wartości logowania służą wyłącznie do wejścia do demonstracyjnego interfejsu. Nie ma serwerowej granicy uprawnień ani współdzielenia danych między użytkownikami. Zachowaj JSON jako kopię zapasową przed wyczyszczeniem danych przeglądarki.

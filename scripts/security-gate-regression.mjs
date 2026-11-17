@@ -1,21 +1,32 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
-function runGate(vulnerabilities, { missingPatch = false } = {}) {
+function runGate(vulnerabilities, { missingPatch = false, extraUnpatchedCopy = false } = {}) {
   const directory = mkdtempSync(join(tmpdir(), 'jira-security-gate-'));
   try {
+    const lock = JSON.parse(readFileSync(fileURLToPath(new URL('../package-lock.json', import.meta.url)), 'utf8'));
+    mkdirSync(join(directory, 'node_modules'), { recursive: true });
+    if (extraUnpatchedCopy) {
+      const node = 'node_modules/fixture/node_modules/braces';
+      lock.packages[node] = { version: '3.0.3' };
+      const braces = join(directory, node);
+      mkdirSync(join(braces, 'lib'), { recursive: true });
+      writeFileSync(join(braces, 'package.json'), JSON.stringify({ name: 'braces', version: '3.0.3' }));
+      writeFileSync(join(braces, 'lib/parse.js'), '// Unpatched nested copy omitted by the feed.\n');
+    }
+    writeFileSync(join(directory, 'package-lock.json'), JSON.stringify(lock));
     if (missingPatch) {
       const braces = join(directory, 'node_modules/braces');
       mkdirSync(join(braces, 'lib'), { recursive: true });
       writeFileSync(join(braces, 'package.json'), JSON.stringify({ name: 'braces', version: '3.0.3' }));
       writeFileSync(join(braces, 'lib/parse.js'), '// Original or modified parser without the required patch.\n');
     } else {
-      symlinkSync(fileURLToPath(new URL('../node_modules', import.meta.url)), join(directory, 'node_modules'), 'dir');
+      symlinkSync(fileURLToPath(new URL('../node_modules/braces', import.meta.url)), join(directory, 'node_modules/braces'), 'dir');
     }
     const fakeAudit = join(directory, 'audit.cjs');
     const report = { vulnerabilities, metadata: { vulnerabilities: { total: Object.keys(vulnerabilities).length } } };
@@ -47,7 +58,7 @@ test('an empty advisory feed passes only with the verified source patch', () => 
   assert.match(result.stdout, /Security gate PASS/);
 });
 
-for (const severity of ['low', 'moderate', 'high', 'critical']) {
+for (const severity of ['info', 'low', 'moderate', 'high', 'critical', 'unknown']) {
   test(`an unmitigated ${severity} advisory fails the gate`, () => {
     const result = runGate({
       fixture: {
@@ -75,4 +86,20 @@ test('only the exact patched braces advisory is exempt', () => {
   });
   assert.notEqual(unexpected.status, 0);
   assert.match(unexpected.stderr, /Unmitigated audit findings/);
+});
+
+
+test('an empty advisory feed cannot hide an unpatched nested locked copy', () => {
+  const result = runGate({}, { extraUnpatchedCopy: true });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Missing or changed nesting-limit patch/);
+});
+
+test('reported patch locations cannot escape node_modules', () => {
+  const result = runGate({ braces: {
+    name: 'braces', nodes: ['../braces'],
+    via: [{ name: 'braces', severity: 'high', url: 'https://github.com/advisories/GHSA-vfj7-8cjw-p6xm' }],
+  } });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /unexpected package location/);
 });
