@@ -148,9 +148,9 @@ export function KanbanBoard({
                             ? `Przenieś „${task.title}” do: ${prevStatus}`
                             : "Brak poprzedniej kolumny"
                         }
-                        className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                        className="rounded-lg border border-slate-200 min-h-11 min-w-11 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
                       >
-                        ◀
+                        {prevStatus ? `← ${prevStatus}` : "←"}
                       </button>
                       <button
                         type="button"
@@ -163,9 +163,9 @@ export function KanbanBoard({
                             ? `Przenieś „${task.title}” do: ${nextStatus}`
                             : "Brak następnej kolumny"
                         }
-                        className="rounded-lg border border-slate-200 px-2 py-0.5 text-xs text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+                        className="rounded-lg border border-slate-200 min-h-11 min-w-11 px-3 py-2 text-sm text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
                       >
-                        ▶
+                        {nextStatus ? `${nextStatus} →` : "→"}
                       </button>
                     </div>
                   </div>

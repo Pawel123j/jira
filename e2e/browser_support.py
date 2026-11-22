@@ -59,7 +59,11 @@ def application(name, command, cwd, url, env=None):
 @contextlib.contextmanager
 def browser():
     with sync_playwright() as p:
-        instance = p.chromium.launch(executable_path=os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'), headless=True, args=['--no-sandbox'])
+        instance = p.chromium.launch(
+            executable_path=os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH'),
+            headless=True,
+            chromium_sandbox=True,
+        )
         try:
             yield instance
         finally:

@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { emptyTaskForm } from "../data/seed";
 import { loadState } from "../lib/storage";
 import type { ExportPayload, TaskFormState } from "../types";
@@ -116,8 +116,9 @@ describe("useJiraStore", () => {
     act(() => {
       result.current.createTask(form);
     });
-    const stored = loadState<typeof result.current.tasks>("tasks", []);
-    expect(stored).toHaveLength(4);
+    const stored = loadState<ExportPayload | null>("snapshot", null);
+    expect(stored?.tasks).toHaveLength(4);
+    expect(stored?.comments[stored!.tasks[0].id]).toEqual([]);
   });
 
   it("imports a payload, replacing state", () => {
@@ -138,8 +139,8 @@ describe("useJiraStore", () => {
           points: 0,
           subtasks: [],
           deleted: false,
-          createdAt: "",
-          updatedAt: "",
+          createdAt: "2026-10-28T10:00:00Z",
+          updatedAt: "2026-10-28T10:00:00Z",
         },
       ],
       comments: { x: [] },
@@ -151,5 +152,35 @@ describe("useJiraStore", () => {
     expect(result.current.tasks).toHaveLength(1);
     expect(result.current.tasks[0].title).toBe("Z importu");
     expect(result.current.audit[0].action).toBe("DATA_IMPORTED");
+  });
+});
+
+
+describe("storage recovery", () => {
+  it.each(["{}", "[null]", "not-json"])("preserves invalid legacy state %s", (raw) => {
+    localStorage.setItem("mini-jira:tasks", raw);
+    const { result } = renderHook(() => useJiraStore());
+    expect(result.current.tasks).toHaveLength(3);
+    expect(result.current.saveError).toContain("Nie można odczytać");
+    act(() => { result.current.createTask(form); });
+    expect(localStorage.getItem("mini-jira:tasks")).toBe(raw);
+    expect(localStorage.getItem("mini-jira:snapshot")).toBeNull();
+    expect(result.current.recoveryRaw).toContain(raw.replace(/"/g, '\\"'));
+  });
+  it("keeps changes in memory when quota is exceeded and retries one consistent snapshot", () => {
+    const { result, unmount } = renderHook(() => useJiraStore());
+    const previous = localStorage.getItem("mini-jira:snapshot");
+    const fail = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Full", "QuotaExceededError"); });
+    act(() => { result.current.createTask(form); });
+    expect(result.current.tasks).toHaveLength(4);
+    expect(result.current.saveError).toContain("Nie zapisano");
+    expect(localStorage.getItem("mini-jira:snapshot")).toBe(previous);
+    fail.mockRestore();
+    act(() => { result.current.retrySave(); });
+    expect(result.current.saveError).toBe("");
+    unmount();
+    const reloaded = renderHook(() => useJiraStore());
+    expect(reloaded.result.current.tasks).toHaveLength(4);
+    expect(reloaded.result.current.audit[0].action).toBe("TASK_CREATED");
   });
 });
