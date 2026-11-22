@@ -3,6 +3,23 @@
 Lekki menedżer zadań inspirowany Jirą — zbudowany w **React + TypeScript + Vite + Tailwind CSS**.
 Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w `localStorage`.
 
+### Gdy zapis jest uszkodzony lub niedostępny
+
+Zadania (także pola zagnieżdżone), komentarze i audit log są sprawdzane przed użyciem.
+Niepoprawny JSON lub struktura danych nie uruchamia automatycznego resetu zapisów:
+oryginalne wartości pozostają w przeglądarce, a aplikacja pokazuje stałe ostrzeżenie
+i działa wyłącznie w pamięci karty. Odmowa dostępu lub brak miejsca również
+zatrzymuje dalszy automatyczny zapis. Przed zamknięciem karty użyj przycisku
+**Eksportuj bieżącą sesję** w ostrzeżeniu. Ten plik zawiera stan bieżącej sesji,
+nie kopię uszkodzonego oryginału.
+
+Przed ręczną naprawą użyj **Pobierz oryginalny zapis**, aby zachować surową kopię
+klucza `mini-jira:snapshot` i starszych kluczy `mini-jira:tasks`,
+`mini-jira:comments` oraz `mini-jira:audit`. Nie usuwaj ich bez kopii.
+**Ponów zapis** wymaga potwierdzenia przed zastąpieniem uszkodzonego oryginału.
+Po przywróceniu uprawnień możesz też importować wyeksportowaną sesję. Reset demo w trybie pamięciowym nie nadpisuje uszkodzonego
+oryginału. Starsze zadania bez pól `points` i `subtasks` pozostają obsługiwane.
+
 > Wcześniej projekt był pojedynczym plikiem `mini jira.jsx`, który nie dało się
 > uruchomić. Został przebudowany na pełnoprawną, modularną aplikację.
 
@@ -14,15 +31,16 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
   - **Tablica Kanban** — kolumny `To do / In progress / Done` z **przeciąganiem** (drag & drop) do zmiany statusu.
   - **Dashboard** — statystyki: liczba zadań, ukończone, po terminie, soft deleted, rozkład wg statusu i priorytetu oraz pasek postępu.
 - **Zarządzanie zadaniami**: tworzenie, edycja, soft delete + przywracanie oraz **trwałe usuwanie z modalem potwierdzenia**, priorytety, terminy, przypisani, tagi.
-- **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, na nagłówku kolumny licznik zadań, suma story points (`Σ`) i licznik zadań po terminie. Karty można też przenosić **przyciskami ◀ ▶** (dostępność z klawiatury, bez drag & drop).
+- **Kanban z przeciąganiem**: zmiana statusu i **zmiana kolejności w obrębie kolumny**, na nagłówku kolumny licznik zadań, suma story points (`Σ`) i licznik zadań po terminie. Karty można też przenosić przyciskami z nazwą kolumny docelowej (dostępność klawiaturą i większe cele dotykowe).
 - **Podzadania / checklisty** w zadaniu z paskiem postępu i licznikiem `done/total` widocznym także na kafelku.
 - **Story points (estymaty)** — pole w formularzu, znacznik na kafelku oraz podsumowanie zrobione/łącznie na dashboardzie.
 - **Komentarze** do zadań.
 - **Audit log** — każda zmiana (utworzenie, edycja, zmiana statusu, delete/restore, trwałe usunięcie, komentarz, import) jest rejestrowana.
 - **Filtrowanie na żywo** po tekście, statusie, priorytecie, widoczności usuniętych oraz **„Tylko moje”** (zadania przypisane do zalogowanego użytkownika) + **paginacja** („Pokaż więcej”).
 - **Sortowanie listy** wg priorytetu, terminu, ostatniej zmiany lub tytułu (nie narusza ręcznej kolejności na tablicy Kanban).
-- **Eksport / import danych** do pliku JSON (kopia zapasowa stanu).
-- **Trwałość danych** — zadania, komentarze, audit log, motyw, widok i sesja zapisywane w `localStorage`.
+- **Eksport / import danych** do pliku JSON (kopia zapasowa stanu). Import pokazuje liczbę zadań, komentarzy, podzadań i wpisów historii; anulowanie zachowuje bieżący stan. Potwierdzenie zastępuje dane dopiero po poprawnym, pojedynczym zapisie całego snapshotu. Brak miejsca lub uprawnień pozostawia poprzedni stan w pamięci i w zapisie.
+- **Trwałość danych** — zadania, komentarze i audit log są zapisywane razem jako wersjonowany snapshot; motyw, widok i sesja mają osobne ustawienia w `localStorage`.
+- **Odzyskiwanie danych** — niepoprawny zapis legacy nie nadpisuje się przy starcie; aplikacja pokazuje dane demo, udostępnia oryginał do pobrania i wymaga świadomego potwierdzenia przed zastąpieniem. Błąd zapisu utrzymuje zmiany w bieżącej karcie i pokazuje ponowienie.
 - **Skróty klawiszowe**: `1` / `2` / `3` przełączają widoki, `/` ustawia fokus w wyszukiwarce, `?` otwiera okno z pomocą skrótów.
 - **Motyw jasny/ciemny** (Tailwind `dark` mode).
 - **Powiadomienia** jako stos toastów z auto-znikaniem.
@@ -30,9 +48,8 @@ Aplikacja działa w całości po stronie przeglądarki, a stan jest zapisywany w
 
 ## 🖼️ Zrzuty ekranu
 
-Zrzuty pochodzą z builda produkcyjnego (`npm run build` + `vite preview`)
-i są robione automatycznie przeglądarką sterowaną skryptem — to stan
-aplikacji z tego commita, nie makieta.
+Zrzuty pokazują działającą aplikację. Test E2E odświeża mobilny Kanban na buildzie
+produkcyjnym; pozostałe ilustracje pochodzą z wcześniejszej wersji interfejsu.
 
 ### Tablica Kanban
 ![Tablica Kanban](docs/screenshots/kanban.png)
@@ -59,13 +76,14 @@ aplikacji z tego commita, nie makieta.
 ## 🚀 Uruchomienie
 
 ```bash
-npm install      # instalacja zależności
+npm ci           # odtwarzalna instalacja zależności (Node.js 24.15+ w linii 24)
 npm run dev      # serwer deweloperski (http://localhost:5173)
 npm run build    # produkcyjny build do dist/
 npm run preview  # podgląd builda produkcyjnego
 npm run typecheck# sprawdzenie typów (tsc -b)
 npm run lint     # ESLint
 npm test         # testy jednostkowe (Vitest)
+npm run test:security # regresja bramki także przy pustej odpowiedzi advisory
 npm run test:watch # testy w trybie watch
 ```
 
@@ -73,13 +91,12 @@ npm run test:watch # testy w trybie watch
 
 - **Vitest + React Testing Library** (środowisko `jsdom`). Testy obejmują
   helpery (`format`, `sort`, `stats`, `exportImport`), store (`useJiraStore`)
-  oraz komponenty (logowanie, Kanban, podzadania, filtry) — łącznie 45 testów.
+  oraz komponenty (logowanie, Kanban, podzadania, filtry) — łącznie 125 testów.
 - **Error boundary** — nieoczekiwane błędy pokazują przyjazny ekran zamiast
   pustej strony.
 - **GitHub Actions** (`.github/workflows/ci.yml`) na każdy push i PR uruchamia
   kolejno: `lint → typecheck → audyt zależności → test → build`.
-- **`npm audit` zwraca 0 podatności.** CI blokuje merge przy poziomie `high`
-  lub wyższym.
+- Kontrola bezpieczeństwa CI kończy się błędem przy każdej nieusuniętej podatności, niezależnie od poziomu; jedyny wyjątek to dokładnie zweryfikowana, tymczasowa poprawka `braces` opisana poniżej.
 
 ## 🌐 Wdrożenie
 
@@ -123,6 +140,7 @@ src/
     format.ts             # formatowanie dat, isOverdue, makeId
     labels.ts             # polskie etykiety akcji i ról
     storage.ts            # bezpieczny wrapper na localStorage
+    stateValidation.ts    # walidacja zapisów i importu, zgodność starszych zadań
     sort.ts               # sortowanie listy zadań
     stats.ts              # agregacja story points
     exportImport.ts       # budowanie/parsowanie/pobieranie JSON
@@ -146,7 +164,8 @@ src/
 
 - **Stan zadań** trzyma `useJiraStore` (oparty na `useReducer`). Każda mutacja
   jest czysta, automatycznie dopisuje wpis do audit logu i zapisuje stan do
-  `localStorage`.
+  `localStorage`, jeśli odczytane dane są prawidłowe i zapis jest dostępny.
+  Niepowodzenie uruchamia jawny tryb pamięciowy z możliwością eksportu sesji.
 - **Motywowanie** opiera się na wariancie `dark:` Tailwinda — przełącznik dodaje/usuwa
   klasę `dark` na `<html>`, więc nie ma rozjazdu warunkowych klas w komponentach.
 - **Formularze** (tworzenie/edycja) używają wspólnego `TaskForm`. Panel edycji
@@ -156,13 +175,38 @@ src/
 
 React 18 · TypeScript 5 · Vite 8 · Tailwind CSS 3 · Vitest 5 · ESLint
 
+Środowisko lokalne i wszystkie workflow używają **Node.js 24** (co najmniej
+24.15.0, zgodnie z wymaganiami jsdom). `npm ci` instaluje wersje z lockfile;
+Vite/Vitest/jsdom są utrzymywane w dotychczasowych głównych wersjach.
+
 ## 📄 Licencja
 
 MIT — patrz [LICENSE](LICENSE).
 
+## Regresje zapisu — JIRA-01
+
+`npm test`: **79 testów PASS**, w tym niepoprawne typy i zagnieżdżone pola,
+komentarze/audit, uszkodzony JSON, zachowanie oryginału po edycji i ponownym
+otwarciu, odmowa odczytu, quota/odmowa zapisu, zgodność starszych zadań,
+prawidłowy zapis po odświeżeniu i widoczne ostrzeżenie przed logowaniem.
+Lint, typecheck oraz build produkcyjny przechodzą. Te regresje wykonano w JSDOM;
+nie zastępują pełnego browser E2E ani bramki bezpieczeństwa zależności.
+
+## Zależności i odtworzenie instalacji — 2026-10-25
+
+Świeże `npm ci` w osobnym katalogu przeszło z Node 24.19.0. Zależności:
+Vite 8.3.5, Vitest/mocker 5.0.5, jsdom 30.1.3 i undici 8.12.3.
+`npm audit` zwróciło 0 zgłoszeń w tej dacie; `security:check` dodatkowo
+sprawdziło poprawkę i regresje `braces`. Osobny test `test:security` potwierdza,
+że pusta odpowiedź bazy advisory nie przepuści brakującej poprawki.
+79 testów aplikacji, test bramki, lint, typecheck i produkcyjny build przeszły.
+Wynik jest lokalny: nie oznacza nowego wykonania GitHub Actions, wdrożenia Pages
+ani browser E2E. Ostrzeżenia deprecation starszego ESLint i jego narzędzi
+pozostają zadaniem utrzymaniowym; nie są maskowane przez wyłączenie audytu.
+
 ## Weryfikacja środowiska — 2026-10-17
 
-Sprawdzono lokalne demo: logowanie, utworzenie, wyszukiwanie, edycję, zapis po odświeżeniu i trwałe usunięcie zadania w Chromium. `npm run lint`, `npm run typecheck`, `npm test` (45 testów) i build przechodzą. Test przeglądarkowy jest w `e2e/`, uruchamiany przez `.github/workflows/browser.yml`.
+`npm run lint`, `npm run typecheck`, `npm test` (58 testów) i `npm run build` przechodzą. Dwa testy Playwright w `e2e/` sprawdzają operacje na zadaniach, zapis po odświeżeniu, klawiaturę, dostępność oraz odzyskiwanie niepoprawnego zapisu; oba przechodzą w Chromium. Zrzut mobilnego Kanbana w README został ponownie zrobiony na bieżącym buildzie.
 
 Logowanie oraz role w aplikacji lokalnej nie stanowią zabezpieczenia serwera. Dane pozostają w przeglądarce. Hosting publiczny i współpraca wielu użytkowników nie zostały zweryfikowane. Audyt npm nadal zgłasza zależności narzędziowe Tailwind/ESLint; aktualizacja samego lockfile nie usuwa wszystkich zgłoszeń.
 
@@ -179,10 +223,10 @@ python -m playwright install chromium
 python -m pytest -q e2e
 ```
 
-Na Linux może być potrzebne `python -m playwright install --with-deps chromium` z uprawnieniami administratora. Alternatywnie `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` wskazuje istniejący Chromium. Testy uruchamiają i zatrzymują własny serwer, używają nowego kontekstu przeglądarki i zapisują logi w ignorowanym `e2e/artifacts/`. Pełny backend musi mieć zainstalowane swoje zależności; `E2E_API_PYTHON` jest opcjonalnym wyborem jego interpretera w AutoDesk/BankGuard. Testy nie uruchamiają wdrożenia.
+Na Linux może być potrzebne `python -m playwright install --with-deps chromium` z uprawnieniami administratora. Alternatywnie `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` wskazuje istniejący Chromium. Testy uruchamiają i zatrzymują własny serwer, używają nowego kontekstu przeglądarki i zapisują logi w ignorowanym `e2e/artifacts/`. Chromium działa z włączonym sandboxem. Mini Jira nie ma backendu; testy nie uruchamiają wdrożenia.
 
-## Walidacja etapu 2 — 2026-10-18
+## Weryfikacja danych
 
-Bramka `npm run security:check` sprawdza pełny audyt, integralność poprawki parsera `braces` i regresje złośliwych wzorców. Surowy `npm audit` nadal zgłasza tę poprawioną lokalnie zależność; szczegóły i termin 2026-11-18 opisano w [SECURITY_PATCH.md](SECURITY_PATCH.md). `npm ci` stosuje patch automatycznie i przerywa pracę, jeśli nie pasuje.
+Bramka `npm run security:check` sprawdza pełny audyt, integralność poprawki parsera `braces` i regresje złośliwych wzorców **niezależnie od obecności zgłoszenia w bieżącej bazie advisory**. Surowy `npm audit` może nadal zgłaszać tę poprawioną lokalnie zależność; szczegóły i termin 2026-12-17 opisano w [SECURITY_PATCH.md](SECURITY_PATCH.md). `npm ci` stosuje patch automatycznie i przerywa pracę, jeśli nie pasuje.
 
-Poprawiono kontrast ukończonych podzadań. E2E obejmuje CRUD/reload, logowanie klawiaturą oraz axe na ekranie logowania, tablicy i edycji. Lokalnie: 45 testów, lint/typy/build, bramka bezpieczeństwa i 1 E2E PASS. To lokalny menedżer zadań; role demonstracyjne nie tworzą serwerowej granicy uprawnień.
+Wartości logowania służą wyłącznie do wejścia do demonstracyjnego interfejsu. Nie ma serwerowej granicy uprawnień ani współdzielenia danych między użytkownikami. Zachowaj JSON jako kopię zapasową przed wyczyszczeniem danych przeglądarki.

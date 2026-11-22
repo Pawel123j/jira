@@ -1,7 +1,38 @@
 # Temporary dependency security patch
 
-`braces@3.0.3` has no patched release for GHSA-vfj7-8cjw-p6xm in the registry at validation time (2026-10-18). Its parser now rejects AST nesting beyond 128 levels, including braces and parentheses, before recursive compilation/stringification/expansion. Normal glob expansion and ranges remain supported. Untrusted prebuilt AST objects are outside the string-pattern API used by these build tools.
+Reviewed again on **2026-11-17**, using Node 24.19.0 and a clean `npm ci`.
+The registry still publishes `braces@3.0.3` as latest. Its unpatched string parser
+permits recursive nesting that can overflow the stack (GHSA-vfj7-8cjw-p6xm).
+The versioned patch rejects nesting beyond 128 before compilation, stringification
+or expansion. Untrusted prebuilt AST objects are outside the string-pattern API
+used by this project's build tools.
 
-`npm ci` applies the versioned patch with `patch-package --error-on-fail`. `npm run security:check` queries the full npm audit, verifies the installed parser SHA-256 and version for **every reported braces installation**, runs deeply nested/unfinished/mixed pattern regressions plus valid pattern checks, and fails on any other high/critical advisory or unavailable audit. This exact advisory is considered mitigated only with that evidence. Raw `npm audit` still reports it; do not describe the raw audit as zero findings.
+`npm ci` applies the patch with `patch-package --error-on-fail`.
+`npm run security:check` obtains a fresh full audit and verifies the package name,
+version and parser SHA-256 for **every braces copy in package-lock.json**, plus
+any additional copy reported by the feed. Verification is mandatory even when the
+feed omits the advisory. Missing/changed patches, unavailable audit, unexpected
+advisories at **any severity**, or the review deadline fail the gate.
 
-The exception expires on **2026-11-18** and must be reviewed against upstream. Remove the patch and exception when a compatible fixed release is available. The gate also fails if the patch is absent, modified, or applied to another version. Moderate selector-parser issues are addressed with 7.1.6 and the production build/E2E verify compatibility.
+## Review evidence
+
+An independent review reproduced an unpatched stack overflow using 4999 nested
+delimiters and a 9999-character pattern, below the separate length limit.
+The patched parser rejects it with the nesting error. Persistent checks cover:
+
+- Valid 127/128-level patterns and rejection at 129, including public string APIs.
+- Braces, parentheses, mixed/mismatched/unfinished input and very long patterns.
+- Escaped/quoted delimiters, literal character classes, shallow groups and ranges.
+- Empty advisory feeds, altered root and nested locked copies, paths outside
+  node_modules, exact advisory matching and unexpected severities including info.
+
+The new assessment supports review **before 2026-12-17**. This is a temporary
+mitigation, not an upstream fix. Remove the patch/exception when a compatible
+fixed version is released; do not extend its deadline without another assessment.
+The Nov 17 raw npm audit reported zero advisories; this does not remove the need
+to validate the patch. `npm run test:security` runs the gate fixtures offline.
+
+Selector-parser issues are addressed with 7.1.6. The targeted
+`@typescript-eslint/typescript-estree` override to `minimatch@11.0.8` addresses
+GHSA-g3hv-icrc-35l4 without changing other dependency paths. Lint, types, build
+and browser CI continue to verify integration on Node 24.
